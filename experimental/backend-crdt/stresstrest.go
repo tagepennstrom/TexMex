@@ -4,7 +4,6 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"sync"
 	"time"
 )
 
@@ -122,72 +121,6 @@ func dataToString(data []Item) {
 
 }
 
-func letterScrambeler(input string, db []Item) []Item {
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-
-	// Create a new random generator with its own seed.
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-
-	for i, letter := range input {
-		wg.Add(1)
-		go func(i int, letter rune) {
-			defer wg.Done()
-
-			// Wait until the current text length equals the intended index (i).
-			for {
-				mu.Lock()
-				currentLen := len(db) - 1
-				mu.Unlock()
-				if currentLen == i {
-					break
-				}
-				time.Sleep(10 * time.Millisecond)
-			}
-
-			// Simulate a random delay to mimic typing.
-			time.Sleep(time.Duration(r.Intn(100)) * time.Millisecond)
-
-			// With a 50% chance, simulate a typo:
-			if r.Float64() < 0.5 {
-				// Generate a wrong letter.
-				wrongLetter := string('a' + rune(r.Intn(26)))
-				mu.Lock()
-				// Since current length equals i, we can only insert at len(db).
-				db = Insertion(wrongLetter, len(db), db, 0)
-				mu.Unlock()
-
-				// Short delay before deleting the wrong letter.
-				time.Sleep(time.Duration(r.Intn(100)) * time.Millisecond)
-
-				mu.Lock()
-				// Delete the wrong letter which is the last element.
-				db = Deletion(len(db)-1, db)
-				mu.Unlock()
-			}
-
-			// Ensure that the text length is still exactly i.
-			for {
-				mu.Lock()
-				currentLen := len(db) - 1
-				mu.Unlock()
-				if currentLen == i {
-					break
-				}
-				time.Sleep(10 * time.Millisecond)
-			}
-
-			// Now insert the correct letter at the end.
-			mu.Lock()
-			db = Insertion(string(letter), len(db), db, 0)
-			mu.Unlock()
-		}(i, letter)
-	}
-
-	wg.Wait()
-	return db
-}
-
 func typewriterSimulator(db []Item, durationSec int) (string, []Item) {
 	// expected will track the correct text state
 	expected := ""
@@ -257,4 +190,8 @@ func WriteThis(input string) {
 	println("------")
 
 	//println("Expected output:", input)
+}
+
+func WriteThisNew(input string) {
+
 }
