@@ -6,17 +6,19 @@
 
 <script>
   const url = "http://localhost:8080";
-  const websocket_connection = new WebSocket(`${url}/websocket`);
+  const websocket_connection = new WebSocket(`${url}/editDocWebsocket`);
   let text_document = document.getElementById("text_document");
 
   fetch(`${url}/document`)
     .then(res => res.text())
     .then(text => {
-      console.log("text: '" + text + "'");
       text_document.value = text;
     });
 
   text_document.addEventListener("input", function() {
-    websocket_connection.send(text_document.value);
+    const message = {
+      document: text_document.value,
+    };
+    websocket_connection.send(JSON.stringify(message));
   });
 </script>
