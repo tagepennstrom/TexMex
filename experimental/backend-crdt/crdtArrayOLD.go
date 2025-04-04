@@ -1,5 +1,7 @@
 package main
 
+/*
+
 import (
 	"fmt"
 	"os"
@@ -103,17 +105,7 @@ func getIndexCoordinate(index int, db []Item) []int {
 	return db[index].Values
 }
 
-/*
-*
 
-  - Insertions happen after a given index.
-
-    Example:
-    a 	b	c	d
-    1	2	3	4
-
-    Inserting 'x' at index 4 gives: "abcdx"
-*/
 func findInsertionCoordinate(index int, db []Item) []int {
 
 	// Case 4. Insertion at end. [3, 1] EOF -> [4]
@@ -165,6 +157,7 @@ func (d *Document) LoadInsert(index []int, uID int) {
 	// lägg den där
 	// updatera cursor om det behövs
 
+
 }
 
 func (d *Document) MoveCursor(index int) {
@@ -189,19 +182,7 @@ func NewDocument() Document {
 	return doc
 }
 
-/*
-#
-#
-#
-#
 
-	Debugfunktioner
-
-#
-#
-#
-#
-*/
 func CompareIndexes(coord1 []int, coord2 []int) bool {
 
 	len1 := len(coord1)
@@ -226,3 +207,6 @@ func CompareIndexes(coord1 []int, coord2 []int) bool {
 	}
 	return len1 > len2
 }
+
+
+*/

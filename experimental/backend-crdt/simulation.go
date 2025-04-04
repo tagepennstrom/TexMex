@@ -69,7 +69,7 @@ func SimulateDoc() {
 	doc.Delete() // -a3
 	doc.Delete() // -a2
 	doc.Delete() // -a1
-	doc.Delete() // inget händer
+	doc.Delete() // inget händer för den är i början av dokumentet
 
 	doc.DebugDocContents()
 }
