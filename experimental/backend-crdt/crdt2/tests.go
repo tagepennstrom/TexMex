@@ -26,6 +26,7 @@ func (d *Document) testCaseOne() int {
 }
 
 func (d *Document) testCaseTwo() int {
+
 	d.CleanDocument()
 	d.Insert("A", 1)
 	d.Insert("B", 1)

@@ -46,20 +46,16 @@ func CompareIndexes(coord1 []int, coord2 []int) bool {
 	count := 0
 
 	for count < len1 && count < len2 {
-		//Var tvungen att ändra på true och false här. Vi vill ju att denna funktion skall hålla på tills C1 är större, men tror fortfarande
-		//det finns något underliggande logisk fel i denna men kan ej komma på nu. Nu hamnar de iallafall rätt i ll om man insertar längst bak.
-		//Inser nu att det uppstår ett problem vid deltion nu med denna implementation, Den tolkar allt som en tiebreaker.
-		//Om man har false när c1 är störst och true när c2 är minst verkar inget
+
 		if coord1[count] > coord2[count] {
 			return true //c1 biggest
 
-			//La till "<=" för detta verkar funka för tillfället, kanske ta bort sen? eller så ska det vara såhär, förmodligen inte
-		} else if coord1[count] <= coord2[count] {
+		} else if coord1[count] < coord2[count] {
 			return false //c2 biggest
 		}
 		count++
-
 	}
+
 	if len1 == len2 {
 		fmt.Errorf("Coordinates have the same size")
 		println("Error: Coordinates can't have the same size. OBS Måste implementera tiebreaker")
@@ -215,15 +211,13 @@ func (d *Document) Insert(letter string, uID int) {
 
 	insertCoord := getCoordinateProperties(cursorPosCoordinate, cursorPosNextCoord)
 
-	d.CursorForward()
-
 	d.Textcontent = Insertion(letter, insertCoord, d.Textcontent, uID)
+	d.CursorForward()
 
 }
 
 func (d *Document) CursorForward() {
 	if d.CursorPosition.Next != nil {
-		//fmt.Println("Cursor move:", d.CursorPosition.Coordinate, "->", d.CursorPosition.Next.Coordinate)
 		d.CursorPosition = d.CursorPosition.Next
 
 	} else {
@@ -236,6 +230,8 @@ func (d *Document) CursorBackwards() {
 	if d.CursorPosition.ID != 0 {
 		d.CursorPosition = d.CursorPosition.Prev
 
+	} else {
+		println("Error: Can't move cursor further back")
 	}
 }
 
@@ -253,8 +249,6 @@ func (d *Document) MoveCursor(index int) {
 		println("Error. Can't move cursor out of bounds")
 	} else {
 
-		// TODO: Loopa och gå igenom lista "x" antal gånger
-		// Item som vi landar på är nya cursorposition
 		var newPosition Item
 		current := d.Textcontent.Head
 		for i := 0; i < index; i++ {
@@ -270,6 +264,8 @@ func (d *Document) Delete() {
 	if d.CursorPosition.Prev != nil {
 		savedCursor := d.CursorPosition
 
+		d.CursorBackwards()
+
 		// Link the previous node to the next node
 		savedCursor.Prev.Next = savedCursor.Next
 
@@ -281,14 +277,8 @@ func (d *Document) Delete() {
 			d.Textcontent.Tail = savedCursor.Prev
 		}
 
-		//d.Textcontent = Deletion(d.CursorPosition.Coordinate, d.Textcontent)
 		d.Textcontent.Length--
 
-		if savedCursor.Prev.Next != nil {
-			d.CursorPosition = savedCursor.Prev.Next
-		} else {
-			d.CursorPosition = d.Textcontent.Tail
-		}
 	}
 }
 

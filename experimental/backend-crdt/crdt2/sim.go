@@ -88,20 +88,39 @@ func (d *Document) ExtractCoordinates() string {
 	var result string
 	for current := d.Textcontent.Head; current != nil; current = current.Next {
 		result += fmt.Sprint(current.Coordinate) + ""
+		fmt.Println("Loop: ", result)
 	}
 	return result
 }
 
 func (d *Document) CleanDocument() {
-	if d.Textcontent.Length > 0 {
-		d.MoveCursor(1)
+	if d.Textcontent.Tail.ID == 0 {
+		println("Doc already cleared")
+		return // doc already cleared
 	}
+
+	d.MoveCursor(d.Textcontent.Length)
+
 	for d.Textcontent.Length > 0 {
 		d.Delete()
 	}
 }
 
 func main() {
-	processInput()
-	// runAllTests() // <- Antons tester (ligger i tests.go)
+	//processInput()
+	runAllTests() // <- Antons tester (ligger i tests.go)
+
+	d := NewDocument()
+
+	d.CleanDocument()
+	d.Insert("A", 1)
+	d.Insert("B", 1)
+	d.Insert("D", 1)
+	d.MoveCursor(2)
+	d.Insert("C", 1)
+
+	d.DisplayWithCursor()
+
+	d.CleanDocument()
+
 }
