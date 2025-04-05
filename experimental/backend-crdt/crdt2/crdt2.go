@@ -26,15 +26,19 @@ type Item struct {
 
 func (ll *LinkedList) Append(newItem *Item) {
 	if ll.Tail == nil {
+		println("Error: Detta bör aldrig hända")
 		ll.Head = newItem
 		ll.Tail = newItem
 		return
 	}
+
 	ll.Tail.Next = newItem
 	newItem.Prev = ll.Tail
 	ll.Tail = newItem
+	newItem.Next = nil
 }
 
+// Returns true if c1 is smaller than c2
 func CompareIndexes(coord1 []int, coord2 []int) bool {
 
 	len1 := len(coord1)
@@ -44,12 +48,12 @@ func CompareIndexes(coord1 []int, coord2 []int) bool {
 	for count < len1 && count < len2 {
 		//Var tvungen att ändra på true och false här. Vi vill ju att denna funktion skall hålla på tills C1 är större, men tror fortfarande
 		//det finns något underliggande logisk fel i denna men kan ej komma på nu. Nu hamnar de iallafall rätt i ll om man insertar längst bak.
-		//Inser nu att det uppstår ett problem vid deltion nu med denna implementation, Den tolkar allt som en tiebreaker. 
+		//Inser nu att det uppstår ett problem vid deltion nu med denna implementation, Den tolkar allt som en tiebreaker.
 		//Om man har false när c1 är störst och true när c2 är minst verkar inget
 		if coord1[count] > coord2[count] {
 			return true //c1 biggest
 
-		//La till "<=" för detta verkar funka för tillfället, kanske ta bort sen? eller så ska det vara såhär, förmodligen inte
+			//La till "<=" för detta verkar funka för tillfället, kanske ta bort sen? eller så ska det vara såhär, förmodligen inte
 		} else if coord1[count] <= coord2[count] {
 			return false //c2 biggest
 		}
@@ -61,7 +65,7 @@ func CompareIndexes(coord1 []int, coord2 []int) bool {
 		println("Error: Coordinates can't have the same size. OBS Måste implementera tiebreaker")
 		os.Exit(1)
 	}
-	return len1 < len2
+	return len1 > len2
 }
 
 func getCoordinateProperties(prevCord []int, nextCord []int) []int {
@@ -203,7 +207,6 @@ func (d *Document) Insert(letter string, uID int) {
 		insertCoord := []int{cursorPosCoordinate[0] + 1}
 
 		d.Textcontent = Insertion(letter, insertCoord, d.Textcontent, uID)
-
 		d.CursorForward()
 
 		return
@@ -212,20 +215,25 @@ func (d *Document) Insert(letter string, uID int) {
 
 	insertCoord := getCoordinateProperties(cursorPosCoordinate, cursorPosNextCoord)
 
+	d.CursorForward()
+
 	d.Textcontent = Insertion(letter, insertCoord, d.Textcontent, uID)
 
-	d.CursorForward()
 }
 
 func (d *Document) CursorForward() {
 	if d.CursorPosition.Next != nil {
+		//fmt.Println("Cursor move:", d.CursorPosition.Coordinate, "->", d.CursorPosition.Next.Coordinate)
 		d.CursorPosition = d.CursorPosition.Next
+
+	} else {
+		println("Can't move cursor further.")
 	}
 }
 
 func (d *Document) CursorBackwards() {
 	// BOF Placeholder har ID 0
-	if d.CursorPosition.Prev.ID != 0 {
+	if d.CursorPosition.ID != 0 {
 		d.CursorPosition = d.CursorPosition.Prev
 
 	}
@@ -248,25 +256,25 @@ func (d *Document) MoveCursor(index int) {
 		// TODO: Loopa och gå igenom lista "x" antal gånger
 		// Item som vi landar på är nya cursorposition
 		var newPosition Item
-		current := d.Textcontent.Head 
+		current := d.Textcontent.Head
 		for i := 0; i < index; i++ {
-			current = current.Next 
+			current = current.Next
 		}
 		newPosition = *current
 		d.CursorPosition = &newPosition
 	}
 }
 
-//OBS använder oss bara av current cursor position för deletion just nu
+// OBS använder oss bara av current cursor position för deletion just nu
 func (d *Document) Delete() {
 	if d.CursorPosition.Prev != nil {
 		savedCursor := d.CursorPosition
 
-			// Link the previous node to the next node
-			savedCursor.Prev.Next = savedCursor.Next
-	
+		// Link the previous node to the next node
+		savedCursor.Prev.Next = savedCursor.Next
+
 		if savedCursor.Next != nil {
-			
+
 			savedCursor.Next.Prev = savedCursor.Prev
 		} else {
 			// Om det är tailen
@@ -276,14 +284,13 @@ func (d *Document) Delete() {
 		//d.Textcontent = Deletion(d.CursorPosition.Coordinate, d.Textcontent)
 		d.Textcontent.Length--
 
-		if savedCursor.Prev.Next != nil{
-		d.CursorPosition = savedCursor.Prev.Next
-		} else{
+		if savedCursor.Prev.Next != nil {
+			d.CursorPosition = savedCursor.Prev.Next
+		} else {
 			d.CursorPosition = d.Textcontent.Tail
 		}
 	}
 }
-
 
 func NewDocument() Document {
 
