@@ -42,12 +42,16 @@ func CompareIndexes(coord1 []int, coord2 []int) bool {
 	count := 0
 
 	for count < len1 && count < len2 {
-
+		//Var tvungen att ändra på true och false här. Vi vill ju att denna funktion skall hålla på tills C1 är större, men tror fortfarande
+		//det finns något underliggande logisk fel i denna men kan ej komma på nu. Nu hamnar de iallafall rätt i ll om man insertar längst bak.
+		//Inser nu att det uppstår ett problem vid deltion nu med denna implementation, Den tolkar allt som en tiebreaker. 
+		//Om man har false när c1 är störst och true när c2 är minst verkar inget
 		if coord1[count] > coord2[count] {
-			return false //c1 biggest
+			return true //c1 biggest
 
-		} else if coord1[count] < coord2[count] {
-			return true //c2 biggest
+		//La till "<=" för detta verkar funka för tillfället, kanske ta bort sen? eller så ska det vara såhär, förmodligen inte
+		} else if coord1[count] <= coord2[count] {
+			return false //c2 biggest
 		}
 		count++
 
@@ -138,7 +142,7 @@ func getCoordinateProperties(prevCord []int, nextCord []int) []int {
 func findPrevItem(insertionCoord []int, db LinkedList) *Item {
 	prev := db.Head
 	for prev.Next != nil {
-		if CompareIndexes(prev.Coordinate, insertionCoord) {
+		if CompareIndexes(prev.Next.Coordinate, insertionCoord) {
 			break
 		} else {
 			prev = prev.Next
@@ -237,26 +241,49 @@ func (d *Document) LoadInsert(index []int, uID int) {
 func (d *Document) MoveCursor(index int) {
 	docLength := d.Textcontent.Length
 
-	if index >= docLength || index < 0 {
+	if index > docLength || index < 0 {
 		println("Error. Can't move cursor out of bounds")
 	} else {
 
 		// TODO: Loopa och gå igenom lista "x" antal gånger
 		// Item som vi landar på är nya cursorposition
 		var newPosition Item
+		current := d.Textcontent.Head 
+		for i := 0; i < index; i++ {
+			current = current.Next 
+		}
+		newPosition = *current
 		d.CursorPosition = &newPosition
 	}
 }
 
+//OBS använder oss bara av current cursor position för deletion just nu
 func (d *Document) Delete() {
 	if d.CursorPosition.Prev != nil {
 		savedCursor := d.CursorPosition
 
-		d.Textcontent = Deletion(d.CursorPosition.Coordinate, d.Textcontent)
+			// Link the previous node to the next node
+			savedCursor.Prev.Next = savedCursor.Next
+	
+		if savedCursor.Next != nil {
+			
+			savedCursor.Next.Prev = savedCursor.Prev
+		} else {
+			// Om det är tailen
+			d.Textcontent.Tail = savedCursor.Prev
+		}
 
-		d.CursorPosition = savedCursor.Prev
+		//d.Textcontent = Deletion(d.CursorPosition.Coordinate, d.Textcontent)
+		d.Textcontent.Length--
+
+		if savedCursor.Prev.Next != nil{
+		d.CursorPosition = savedCursor.Prev.Next
+		} else{
+			d.CursorPosition = d.Textcontent.Tail
+		}
 	}
 }
+
 
 func NewDocument() Document {
 
