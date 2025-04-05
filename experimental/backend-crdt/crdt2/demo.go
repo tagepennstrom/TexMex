@@ -19,9 +19,11 @@ func processInput() {
 	defer keyboard.Close()
 
 	doc := NewDocument()
+	var debugOn bool = false
 
-	fmt.Println("Press keys. (Press '0' to exit)")
 	for {
+		fmt.Println("(Press '0' to exit. Press '9' for debug screen)")
+
 		char, key, err := keyboard.GetKey()
 		if err != nil {
 			log.Fatal(err)
@@ -33,10 +35,10 @@ func processInput() {
 			break
 		}
 		if char == '9' {
+			debugOn = !debugOn
 			fmt.Print("\033[H\033[2J")
 			doc.DisplayWithCursor()
 
-			doc.Debug(true)
 		} else if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') {
 			doc.letterAction(char)
 		} else if key == keyboard.KeyArrowLeft {
@@ -47,6 +49,10 @@ func processInput() {
 			doc.deleteAction()
 		} else if key == keyboard.KeySpace {
 			doc.letterAction(' ')
+		}
+
+		if debugOn {
+			doc.Debug(true)
 		}
 	}
 }
