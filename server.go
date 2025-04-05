@@ -55,6 +55,7 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		document = editDocMessage.Document
 	}
 }
+
 func compileDocument(w http.ResponseWriter, r *http.Request) {
 	document, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -68,8 +69,8 @@ func compileDocument(w http.ResponseWriter, r *http.Request) {
 	const filename = "document"
 	filenameLatex := fmt.Sprintf("%s.tex", filename)
 	filenamePdf := fmt.Sprintf("%s.pdf", filename)
-	const writeReadPermission = os.FileMode(0666)
 
+	const writeReadPermission = os.FileMode(0666)
 	err = os.WriteFile(filenameLatex, document, writeReadPermission)
 	if err != nil {
 		errorMessage := fmt.Sprintf("Error creating LaTeX file: %s", err)
@@ -105,7 +106,7 @@ func main() {
 
 	http.HandleFunc("/document", middleware(getDocument))
 	http.HandleFunc("/editDocWebsocket", editDocWebsocketHandler)
-	http.HandleFunc("/compileDocument", compileDocument)
+	http.HandleFunc("/compileDocument", middleware(compileDocument))
 
 	err := http.ListenAndServe(serverAddress, nil)
 	log.Println(err)
