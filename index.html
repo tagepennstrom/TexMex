@@ -21,4 +21,9 @@
     };
     websocket_connection.send(JSON.stringify(message));
   });
+
+  websocket_connection.addEventListener("message", (event) => {
+    const res = JSON.parse(event.data);
+    text_document.value = res.document;
+  });
 </script>

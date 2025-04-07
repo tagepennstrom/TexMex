@@ -21,6 +21,7 @@ type EditDocMessage struct {
 }
 
 var document = ""
+var channels []chan EditDocMessage
 
 func getDocument(w http.ResponseWriter, r *http.Request) {
 	_, err := w.Write([]byte(document))
@@ -28,6 +29,34 @@ func getDocument(w http.ResponseWriter, r *http.Request) {
 		errorMessage := fmt.Sprintf("Failed to write document: %s", err)
 		log.Println(errorMessage)
 		http.Error(w, errorMessage, http.StatusInternalServerError)
+	}
+}
+
+func listenChannel(ctx context.Context, c *websocket.Conn, channel chan EditDocMessage) {
+	for {
+		new_doc := <-channel
+		log.Printf("Channel received: %v\n", new_doc)
+		err := wsjson.Write(ctx, c, new_doc)
+		if err != nil {
+			log.Printf("Failed to write websocket message: %s", err)
+		}
+	}
+}
+
+func listenWebsocket(ctx context.Context, c *websocket.Conn) {
+	var editDocMessage EditDocMessage
+	for {
+		err := wsjson.Read(ctx, c, &editDocMessage)
+		if err != nil {
+			log.Printf("Failed to read websocket message: %s", err)
+			return
+		}
+
+		log.Printf("Received: %v\n", editDocMessage)
+		document = editDocMessage.Document
+		for _, channel := range channels {
+			channel <- editDocMessage
+		}
 	}
 }
 
@@ -40,20 +69,11 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Failed to create websocket connection: %s", err)
 		return
 	}
-	defer c.CloseNow()
-
+	channel := make(chan EditDocMessage)
+	channels = append(channels, channel)
 	ctx := context.Background()
-	var editDocMessage EditDocMessage
-	for {
-		err = wsjson.Read(ctx, c, &editDocMessage)
-		if err != nil {
-			log.Printf("Failed to read websocket message: %s", err)
-			return
-		}
-
-		log.Printf("Received: %v\n", editDocMessage)
-		document = editDocMessage.Document
-	}
+	go listenChannel(ctx, c, channel)
+	go listenWebsocket(ctx, c)
 }
 
 func compileDocument(w http.ResponseWriter, r *http.Request) {
