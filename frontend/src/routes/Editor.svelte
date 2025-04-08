@@ -9,21 +9,23 @@
     import { stex } from "@codemirror/legacy-modes/mode/stex"
 
 
+    let { compileLatex } = $props();
     const serverUrl = "http://localhost:8080";
     let socket: WebSocket;
 
-    let latexContent = $state('');
-    let { compileLatex } = $props();
+    let broadcastUpdate = false;
 
     let editor: HTMLElement;
     let editorView: EditorView;
 
     function onUpdate(update: ViewUpdate) {
+        if (!update.docChanged || broadcastUpdate) return;
         console.log(update);
         const message = {
             document: editorView.state.doc.toString(),
         };
         socket.send(JSON.stringify(message));
+        broadcastUpdate = false;
     }
 
     onMount(() => {
@@ -31,18 +33,24 @@
 
         socket.addEventListener("message", (event) => {
             const res = JSON.parse(event.data);
-            console.log(res);
-            // TODO: update editorView state
+            console.log(event);
+            broadcastUpdate = true;
+            editorView.dispatch({
+                changes: {
+                    from: 0,
+                    to: editorView.state.doc.length,
+                    insert: res.document,
+                }
+            });
         });
 
         fetch(`${serverUrl}/document`)
             .then(res => res.text())
             .then(text => {
                 // Initialize CodeMirror editor
-                latexContent = text;
                 editorView = new EditorView({
                     state: EditorState.create({
-                        doc: latexContent,
+                        doc: text,
                         extensions: [
                             basicSetup,
                             StreamLanguage.define(stex),

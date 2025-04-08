@@ -38,10 +38,13 @@ func getDocument(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func broadcastMessage(ctx context.Context, message EditDocMessage) {
+func broadcastMessage(ctx context.Context, message EditDocMessage, sender *websocket.Conn) {
 	log.Printf("Broadcasting to %d clients\n", len(connections))
 	log.Printf("Broadcasting message: %v\n", message)
 	for _, c := range connections {
+		if (c == sender) {
+			continue
+		}
 		err := wsjson.Write(ctx, c, message)
 		if err != nil {
 			log.Printf("Failed to write websocket message: %s", err)
@@ -82,7 +85,7 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 
 		log.Printf("Received: %v\n", editDocMessage)
 		document = editDocMessage.Document
-		broadcastMessage(ctx, editDocMessage)
+		broadcastMessage(ctx, editDocMessage, c)
 	}
 }
 
