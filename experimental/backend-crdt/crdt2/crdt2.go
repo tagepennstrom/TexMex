@@ -287,7 +287,6 @@ func (d *Document) IndexToCoordinate(index int) (Item, bool) {
 		current := d.Textcontent.Head
 		for i := 0; i < index; i++ {
 			current = current.Next
-			println("Hey")
 		}
 
 		newPosition = *current

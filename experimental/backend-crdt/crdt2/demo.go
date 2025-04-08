@@ -12,7 +12,23 @@ import (
 )
 
 func liveUserDemo(d *Document) {
-	arr := []string{"Hello Antwan!", "Hungry Hippos", "We the best music", "God did"}
+	arr := []string{" (Hello Antwan!) ",
+					" (Hungry Hippos) ",
+					" (We the best music) ",
+					" (God did) ",
+					" (Another one) ",
+					" (Bless up) ",
+					" (Major key) ",
+					" (Stay away from 'they') ",
+					" (Secure the bag) ",
+					" (Don't play yourself) ",
+					" (They don't want you to win) ",
+					" (Lion!) ",
+					" (I'm up to something) ",
+					" (You smart) ",
+					" (You loyal) ",
+					" (Celebrate success) ",
+					" (Keep going) ",}
 
 	wordIndexChosen := rand.Int() % len(arr)
 
@@ -44,12 +60,8 @@ func processInput() {
 	doc := NewDocument()
 	var debugOn bool = false
 
-	doc.Insert("G", 1)
-
 	for {
-		fmt.Println("(Press '0' to exit. Press '9' for debug screen)")
-
-		go liveUserDemo(&doc)
+		fmt.Println("(Press '0' to exit. Press '9' for debug screen. Press '1' to simulate another user typing)")
 
 		char, key, err := keyboard.GetKey()
 		if err != nil {
@@ -65,6 +77,9 @@ func processInput() {
 			debugOn = !debugOn
 			fmt.Print("\033[H\033[2J")
 			doc.DisplayWithCursor()
+
+		} else if char == '1' {
+			go liveUserDemo(&doc)
 
 		} else if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') {
 			doc.letterAction(char)
