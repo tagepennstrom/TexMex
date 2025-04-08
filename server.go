@@ -23,7 +23,10 @@ type EditDocMessage struct {
 
 const filename = "document"
 
-var document = ""
+var document = `\documentclass{article}
+\begin{document}
+abcd
+\end{document}`
 var connections []*websocket.Conn
 
 func getDocument(w http.ResponseWriter, r *http.Request) {

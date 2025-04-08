@@ -2,32 +2,56 @@
     import {basicSetup, EditorView} from "codemirror"
     import {onMount} from 'svelte'
     import {EditorState} from "@codemirror/state"
+    import {ViewUpdate} from "@codemirror/view"
     import {
         StreamLanguage,
     } from '@codemirror/language'
     import { stex } from "@codemirror/legacy-modes/mode/stex"
 
-    let latexContent = $state("");
+
+    const serverUrl = "http://localhost:8080";
+    let socket: WebSocket;
+
+    let latexContent = $state('');
     let { compileLatex } = $props();
 
-    let editor: HTMLDivElement;
+    let editor: HTMLElement;
     let editorView: EditorView;
 
-    onMount(() => {
-        // Load saved content from localStorage only in the browser
-        latexContent = localStorage.getItem("latexContent") || "";
+    function onUpdate(update: ViewUpdate) {
+        console.log(update);
+        const message = {
+            document: editorView.state.doc.toString(),
+        };
+        socket.send(JSON.stringify(message));
+    }
 
-        // Initialize CodeMirror editor
-        editorView = new EditorView({
-            state: EditorState.create({
-                doc: latexContent,
-                extensions: [
-                    basicSetup,
-                    StreamLanguage.define(stex)
-                ]
-            }),
-            parent: editor
+    onMount(() => {
+        socket = new WebSocket(`${serverUrl}/editDocWebsocket`);
+
+        socket.addEventListener("message", (event) => {
+            const res = JSON.parse(event.data);
+            console.log(res);
+            // TODO: update editorView state
         });
+
+        fetch(`${serverUrl}/document`)
+            .then(res => res.text())
+            .then(text => {
+                // Initialize CodeMirror editor
+                latexContent = text;
+                editorView = new EditorView({
+                    state: EditorState.create({
+                        doc: latexContent,
+                        extensions: [
+                            basicSetup,
+                            StreamLanguage.define(stex),
+                            EditorView.updateListener.of(onUpdate),
+                        ]
+                    }),
+                    parent: editor
+                });
+            });
     });
 
     function compileContent() {
@@ -38,10 +62,10 @@
 
 
 <button onclick={() => compileContent()}>Compile</button>
-<div class="editor" bind:this={editor}></div>
+<div id="editor" bind:this={editor}></div>
 
 <style>
-    .editor {
+    #editor {
         height: 700px;
         width: 49%;
         float: left;

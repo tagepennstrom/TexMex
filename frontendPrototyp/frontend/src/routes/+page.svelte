@@ -8,11 +8,6 @@
     let compileCount = $state(0);
 
     async function compileLatex(content: string) {
-        // Save the current content to localStorage only in the browser
-        if (typeof window !== "undefined") {
-            localStorage.setItem("latexContent", content);
-        }
-
         const res = await fetch("http://localhost:8080/compileDocument", {
             method: "POST",
             headers: { "Content-Type": "text/plain" },
