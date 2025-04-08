@@ -14,7 +14,7 @@ import (
 	"github.com/coder/websocket/wsjson"
 )
 
-const frontendHost = "localhost:8000"
+const frontendHost = "localhost:5173"
 const serverAddress = "localhost:8080"
 
 type EditDocMessage struct {
@@ -22,7 +22,7 @@ type EditDocMessage struct {
 }
 
 var document = ""
-var connections []*websocket.Conn 
+var connections []*websocket.Conn
 
 func getDocument(w http.ResponseWriter, r *http.Request) {
 	_, err := w.Write([]byte(document))
@@ -47,10 +47,10 @@ func broadcastMessage(ctx context.Context, message EditDocMessage) {
 func removeConn(connToDelete *websocket.Conn) []*websocket.Conn {
 	for i, c := range connections {
 		if c == connToDelete {
-			return slices.Delete(connections, i, i + 1)
+			return slices.Delete(connections, i, i+1)
 		}
 	}
-	return connections;
+	return connections
 }
 
 func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
@@ -126,12 +126,23 @@ func middleware(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+func servePdf(w http.ResponseWriter, r *http.Request) {
+
+	// Log the request to verify the endpoint is being hit
+	fmt.Println("Serving PDF file...")
+
+	// Serve the PDF file with the correct content type
+	w.Header().Set("Content-Type", "application/pdf")
+	http.ServeFile(w, r, "document.pdf")
+}
+
 func main() {
 	log.Printf("Server running on %s\n", serverAddress)
 
 	http.HandleFunc("/document", middleware(getDocument))
 	http.HandleFunc("/editDocWebsocket", editDocWebsocketHandler)
 	http.HandleFunc("/compileDocument", middleware(compileDocument))
+	http.HandleFunc("/pdf", middleware(servePdf))
 
 	err := http.ListenAndServe(serverAddress, nil)
 	log.Println(err)

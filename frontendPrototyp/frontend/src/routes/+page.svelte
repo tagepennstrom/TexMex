@@ -19,24 +19,12 @@
                 localStorage.setItem("latexContent", content);
             }
 
-            const res = await fetch("http://localhost:8080/compile", {
+            const res = await fetch("http://localhost:8080/compileDocument", {
                 method: "POST",
                 headers: { "Content-Type": "text/plain" },
                 body: content
             });
 
-            if (res.ok) {
-                const data = await res.json();
-                if (data.pdfUrl) {
-                    // Update the PDF URL with a unique timestamp using Date.now()
-                    pdfUrl = `http://localhost:8080${data.pdfUrl}?t=${Date.now()}`;
-                    console.log("Updated pdfUrl:", pdfUrl); // Log the updated URL
-                } else {
-                    console.error("PDF URL missing in response");
-                }
-            } else {
-                console.error("Failed to compile LaTeX:", await res.text());
-            }
         } catch (error) {
             console.error("Error during compilation:", error);
         }
