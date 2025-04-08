@@ -11,6 +11,29 @@ import (
 	"github.com/eiannone/keyboard"
 )
 
+func liveUserDemo(d *Document) {
+	arr := []string{"Hello Antwan!", "Hungry Hippos", "We the best music", "God did"}
+
+	wordIndexChosen := rand.Int() % len(arr)
+
+	word := arr[wordIndexChosen]
+	wordLen := len(word)
+
+	pos := rand.Int() % d.Textcontent.Length
+
+	r2 := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	for i := 0; i < wordLen; i++ {
+
+		d.LoadInsert(string(word[i]), pos+i, 3)
+		fmt.Print("\033[H\033[2J")
+		d.DisplayWithCursor()
+
+		time.Sleep(time.Duration(r2.Intn(500)) * time.Millisecond)
+	}
+
+}
+
 func processInput() {
 	// Open the keyboard for reading key events.
 	if err := keyboard.Open(); err != nil {
@@ -21,8 +44,12 @@ func processInput() {
 	doc := NewDocument()
 	var debugOn bool = false
 
+	doc.Insert("G", 1)
+
 	for {
 		fmt.Println("(Press '0' to exit. Press '9' for debug screen)")
+
+		go liveUserDemo(&doc)
 
 		char, key, err := keyboard.GetKey()
 		if err != nil {

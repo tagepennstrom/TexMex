@@ -17,11 +17,11 @@ type LinkedList struct {
 }
 
 type Item struct {
-	Letter     string
-	Coordinate CoordT // istället för []int här
-	ID         int
-	Prev       *Item
-	Next       *Item
+	Letter   string
+	Location CoordT // istället för []int här
+	ID       int
+	Prev     *Item
+	Next     *Item
 }
 
 type CoordT struct {
@@ -80,9 +80,8 @@ func CompareIndexes(c1 CoordT, c2 CoordT) bool {
 	return len1 > len2
 }
 
-func findIntermediateCoordinate(pCoord CoordT, nCoord CoordT, insertID int) []int {
+func findIntermediateCoordinate(pCoord CoordT, nCoord CoordT) []int {
 
-	// TODO I DENNA FUNCTION. HITTA DÄR MAN MÅSTE ANVÄNDA ID FÖR ATT AVGÖRA. (om man ens behöver?)
 	prevCord := pCoord.Coordinate
 	nextCord := nCoord.Coordinate
 
@@ -162,7 +161,7 @@ func findIntermediateCoordinate(pCoord CoordT, nCoord CoordT, insertID int) []in
 func findPrevItem(insertionCoord CoordT, db LinkedList) *Item {
 	prev := db.Head
 	for prev.Next != nil {
-		if CompareIndexes(prev.Next.Coordinate, insertionCoord) {
+		if CompareIndexes(prev.Next.Location, insertionCoord) {
 			break
 		} else {
 			prev = prev.Next
@@ -175,7 +174,7 @@ func Insertion(letter string, coordinate CoordT, db LinkedList, uID int) LinkedL
 
 	prevItem := findPrevItem(coordinate, db)
 
-	newItem := Item{Letter: letter, Coordinate: coordinate, ID: uID} //prev och next
+	newItem := Item{Letter: letter, Location: coordinate, ID: uID} //prev och next
 	db.Length++
 
 	// Case 4
@@ -214,25 +213,31 @@ func Deletion(coordinate CoordT, db LinkedList) LinkedList {
 	return db
 }
 
+func GetAppendCoordinate(prevCoord []int, uID int) CoordT {
+	insertCoord := []int{prevCoord[0] + 1}
+	var newLocation CoordT
+	newLocation.Coordinate = insertCoord
+	newLocation.ID = uID
+
+	return newLocation
+}
+
 func (d *Document) Insert(letter string, uID int) {
 
-	cursorPosCoordinate := d.CursorPosition.Coordinate // TODO REWRITE, det här är oläsbart
+	cursorPosCoordinate := d.CursorPosition.Location // TODO REWRITE, det här är oläsbart
 
 	// Case 4
 	if d.CursorPosition.Next == nil {
-		insertCoord := []int{cursorPosCoordinate.Coordinate[0] + 1}
-		var location CoordT
-		location.Coordinate = insertCoord
-		location.ID = uID
+		location := GetAppendCoordinate(cursorPosCoordinate.Coordinate, uID)
 
 		d.Textcontent = Insertion(letter, location, d.Textcontent, uID)
 		d.CursorForward()
 
 		return
 	}
-	cursorPosNextCoord := d.CursorPosition.Next.Coordinate
+	cursorPosNextCoord := d.CursorPosition.Next.Location
 
-	insertCoord := findIntermediateCoordinate(cursorPosCoordinate, cursorPosNextCoord, uID)
+	insertCoord := findIntermediateCoordinate(cursorPosCoordinate, cursorPosNextCoord)
 
 	var location CoordT = CoordT{
 		Coordinate: insertCoord,
@@ -263,10 +268,55 @@ func (d *Document) CursorBackwards() {
 	}
 }
 
-func (d *Document) LoadInsert(index []int, uID int) {
-	// tänkt att vara en funktion när andras ändringar uppdateras på din klient
-	// hitta vart den ska in
-	// lägg den där
+func (d *Document) IndexToCoordinate(index int) (Item, bool) {
+	docLength := d.Textcontent.Length
+	var newPosition Item
+	var atEnd bool = false
+
+	if index >= docLength {
+		index = docLength
+		atEnd = true
+	}
+
+	if index < 0 {
+		println("Error. Can't move cursor out of bounds")
+		os.Exit(1)
+
+	} else {
+
+		current := d.Textcontent.Head
+		for i := 0; i < index; i++ {
+			current = current.Next
+			println("Hey")
+		}
+
+		newPosition = *current
+	}
+	return newPosition, atEnd
+}
+
+func (d *Document) LoadInsert(letter string, index int, uID int) {
+
+	prevItem, caseFour := d.IndexToCoordinate(index)
+	var newCoordinate CoordT
+
+	fmt.Println(prevItem.Location.Coordinate)
+
+	// Case 4
+	if caseFour {
+		newCoordinate = GetAppendCoordinate(prevItem.Location.Coordinate, uID)
+	}
+
+	fmt.Println(newCoordinate)
+	nextItem := prevItem.Next
+	coord := findIntermediateCoordinate(prevItem.Location, nextItem.Location)
+
+	var location CoordT = CoordT{
+		Coordinate: coord,
+		ID:         uID,
+	}
+
+	d.Textcontent = Insertion(letter, location, d.Textcontent, uID)
 
 }
 
@@ -319,11 +369,11 @@ func NewDocument() Document {
 
 	// BOD = Beginning Of File
 	BOF := Item{
-		Letter:     "",
-		Coordinate: location,
-		ID:         0,
-		Next:       nil,
-		Prev:       nil,
+		Letter:   "",
+		Location: location,
+		ID:       0,
+		Next:     nil,
+		Prev:     nil,
 	}
 
 	textContent := LinkedList{

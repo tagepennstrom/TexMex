@@ -11,7 +11,7 @@ func (d *Document) Debug(extraInfo bool) {
 
 	println("# Cursor Info:")
 	println("----------------------")
-	fmt.Println("C coordinate:", cursor.Coordinate)
+	fmt.Println("C coordinate:", cursor.Location)
 	fmt.Println("C letter:", cursor.Letter)
 
 	if cursor.Prev != nil {
@@ -47,7 +47,7 @@ func (d *Document) PrintDocument(verbose bool) {
 	for current := d.Textcontent.Head; current != nil; current = current.Next {
 		result += current.Letter
 		if verbose {
-			fmt.Print("  ", current.Coordinate, current.Letter, "\n")
+			fmt.Print("  ", current.Location, current.Letter, "\n")
 		}
 	}
 	println("Result:", result)
@@ -87,7 +87,7 @@ func (d *Document) DisplayWithCursor() {
 func (d *Document) ExtractCoordinates() string {
 	var result string
 	for current := d.Textcontent.Head; current != nil; current = current.Next {
-		result += fmt.Sprint(current.Coordinate) + ""
+		result += fmt.Sprint(current.Location) + ""
 		fmt.Println("Loop: ", result)
 	}
 	return result
@@ -108,19 +108,18 @@ func (d *Document) CleanDocument() {
 
 func main() {
 	processInput()
-	runAllTests() // <- Antons tester (ligger i tests.go)
+	//runAllTests() // <- Antons tester (ligger i tests.go)
 
 	d := NewDocument()
 
-	d.CleanDocument()
-	d.Insert("A", 1)
-	d.Insert("B", 1)
-	d.Insert("D", 1)
-	d.MoveCursor(2)
-	d.Insert("C", 1)
+	d.Insert("a", 1)
+	d.Insert("a", 1)
+	d.Insert("a", 1)
 
 	d.DisplayWithCursor()
 
-	d.CleanDocument()
+	d.LoadInsert("b", 2, 3)
+
+	d.DisplayWithCursor()
 
 }
