@@ -2,10 +2,10 @@
     import Header from './Header.svelte';
     import Viewer from './Viewer.svelte';
     import Editor from './Editor.svelte';
-    import SentOutput from './SentOutput.svelte';
 
-    let latexContent = "";
-    let pdfUrl: string | null = "http://localhost:8080/pdf";
+    let latexContent = $state("");
+    const pdfUrl = "http://localhost:8080/pdf";
+    let compileCount = $state(0);
 
     // Load saved content from localStorage only in the browser
     if (typeof window !== "undefined") {
@@ -24,6 +24,7 @@
                 headers: { "Content-Type": "text/plain" },
                 body: content
             });
+            compileCount++;
 
         } catch (error) {
             console.error("Error during compilation:", error);
@@ -35,4 +36,4 @@
 
 <Editor {latexContent} onCompile={compileLatex} />
 
-<Viewer {pdfUrl}/>
+<Viewer {pdfUrl} {compileCount}/>

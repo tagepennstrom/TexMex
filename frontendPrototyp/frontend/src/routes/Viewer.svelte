@@ -1,10 +1,8 @@
 <script>
-    export let pdfUrl;
-
-    $: console.log("Rendering Viewer with pdfUrl:", pdfUrl); // Log the URL
+    let { pdfUrl, compileCount } = $props();
 </script>
 
-{#key pdfUrl}
+{#key compileCount}
     <div class="viewer-container">
         <iframe
             src={pdfUrl}

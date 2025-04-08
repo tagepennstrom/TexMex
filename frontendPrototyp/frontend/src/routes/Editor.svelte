@@ -3,10 +3,8 @@
     export let onCompile: (content: string) => void; // Update the type to accept content
     import {basicSetup, EditorView} from "codemirror"
     import {onMount} from 'svelte'
-    import {EditorState, Compartment} from "@codemirror/state"
+    import {EditorState} from "@codemirror/state"
     import {
-        syntaxHighlighting,
-        defaultHighlightStyle,
         StreamLanguage,
     } from '@codemirror/language'
     import { stex } from "@codemirror/legacy-modes/mode/stex"
