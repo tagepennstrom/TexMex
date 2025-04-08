@@ -107,7 +107,7 @@ func (d *Document) CleanDocument() {
 }
 
 func main() {
-	//processInput()
+	processInput()
 	runAllTests() // <- Antons tester (ligger i tests.go)
 
 	d := NewDocument()
