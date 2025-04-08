@@ -41,11 +41,11 @@
             onCompile(content); // Pass the content to the compile function
         }
     }
-
+``
 </script>
 
 
-<button on:click={() => onCompile(latexContent)}>Compile</button> <!-- Pass the latest content -->
+<button on:click={() => compileContent()}>Compile</button> <!-- Pass the latest content -->
 <p></p>
 
 <div class="editor" bind:this={editor}></div>
