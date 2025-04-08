@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"slices"
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
@@ -33,6 +34,7 @@ func getDocument(w http.ResponseWriter, r *http.Request) {
 }
 
 func broadcastMessage(ctx context.Context, message EditDocMessage) {
+	log.Printf("Broadcasting to %d clients\n", len(connections))
 	log.Printf("Broadcasting message: %v\n", message)
 	for _, c := range connections {
 		err := wsjson.Write(ctx, c, message)
@@ -40,6 +42,15 @@ func broadcastMessage(ctx context.Context, message EditDocMessage) {
 			log.Printf("Failed to write websocket message: %s", err)
 		}
 	}
+}
+
+func removeConn(connToDelete *websocket.Conn) []*websocket.Conn {
+	for i, c := range connections {
+		if c == connToDelete {
+			return slices.Delete(connections, i, i + 1)
+		}
+	}
+	return connections;
 }
 
 func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
@@ -60,6 +71,7 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		err := wsjson.Read(ctx, c, &editDocMessage)
 		if err != nil {
 			log.Printf("Failed to read websocket message: %s", err)
+			connections = removeConn(c)
 			return
 		}
 
