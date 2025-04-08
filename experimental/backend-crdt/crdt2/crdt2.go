@@ -18,10 +18,15 @@ type LinkedList struct {
 
 type Item struct {
 	Letter     string
-	Coordinate []int
+	Coordinate CoordT // istället för []int här
 	ID         int
 	Prev       *Item
 	Next       *Item
+}
+
+type CoordT struct {
+	Coordinate []int
+	ID         int
 }
 
 func (ll *LinkedList) Append(newItem *Item) {
@@ -39,10 +44,13 @@ func (ll *LinkedList) Append(newItem *Item) {
 }
 
 // Returns true if c1 is smaller than c2
-func CompareIndexes(coord1 []int, coord2 []int) bool {
+func CompareIndexes(c1 CoordT, c2 CoordT) bool {
 
+	coord1 := c1.Coordinate
+	coord2 := c2.Coordinate
 	len1 := len(coord1)
 	len2 := len(coord2)
+
 	count := 0
 
 	for count < len1 && count < len2 {
@@ -57,14 +65,26 @@ func CompareIndexes(coord1 []int, coord2 []int) bool {
 	}
 
 	if len1 == len2 {
-		fmt.Errorf("Coordinates have the same size")
-		println("Error: Coordinates can't have the same size. OBS Måste implementera tiebreaker")
-		os.Exit(1)
+
+		if c1.ID < c2.ID {
+			return true
+		} else if c2.ID < c1.ID {
+			return false
+		} else {
+			fmt.Errorf("Coordinates are identical")
+			println("Error: Coordinates can't have the same size and ID. This should not happen!")
+			os.Exit(1)
+		}
+
 	}
 	return len1 > len2
 }
 
-func getCoordinateProperties(prevCord []int, nextCord []int) []int {
+func findIntermediateCoordinate(pCoord CoordT, nCoord CoordT, insertID int) []int {
+
+	// TODO I DENNA FUNCTION. HITTA DÄR MAN MÅSTE ANVÄNDA ID FÖR ATT AVGÖRA. (om man ens behöver?)
+	prevCord := pCoord.Coordinate
+	nextCord := nCoord.Coordinate
 
 	prevLen := len(prevCord)
 	nextLen := len(nextCord)
@@ -139,7 +159,7 @@ func getCoordinateProperties(prevCord []int, nextCord []int) []int {
 	return newCoordinate
 }
 
-func findPrevItem(insertionCoord []int, db LinkedList) *Item {
+func findPrevItem(insertionCoord CoordT, db LinkedList) *Item {
 	prev := db.Head
 	for prev.Next != nil {
 		if CompareIndexes(prev.Next.Coordinate, insertionCoord) {
@@ -151,7 +171,7 @@ func findPrevItem(insertionCoord []int, db LinkedList) *Item {
 	return prev
 }
 
-func Insertion(letter string, coordinate []int, db LinkedList, uID int) LinkedList {
+func Insertion(letter string, coordinate CoordT, db LinkedList, uID int) LinkedList {
 
 	prevItem := findPrevItem(coordinate, db)
 
@@ -174,7 +194,7 @@ func Insertion(letter string, coordinate []int, db LinkedList, uID int) LinkedLi
 	return db
 }
 
-func Deletion(coordinate []int, db LinkedList) LinkedList {
+func Deletion(coordinate CoordT, db LinkedList) LinkedList {
 	prevItem := findPrevItem(coordinate, db)
 
 	itemToRemove := prevItem.Next
@@ -196,22 +216,30 @@ func Deletion(coordinate []int, db LinkedList) LinkedList {
 
 func (d *Document) Insert(letter string, uID int) {
 
-	cursorPosCoordinate := d.CursorPosition.Coordinate
+	cursorPosCoordinate := d.CursorPosition.Coordinate // TODO REWRITE, det här är oläsbart
 
 	// Case 4
 	if d.CursorPosition.Next == nil {
-		insertCoord := []int{cursorPosCoordinate[0] + 1}
+		insertCoord := []int{cursorPosCoordinate.Coordinate[0] + 1}
+		var location CoordT
+		location.Coordinate = insertCoord
+		location.ID = uID
 
-		d.Textcontent = Insertion(letter, insertCoord, d.Textcontent, uID)
+		d.Textcontent = Insertion(letter, location, d.Textcontent, uID)
 		d.CursorForward()
 
 		return
 	}
 	cursorPosNextCoord := d.CursorPosition.Next.Coordinate
 
-	insertCoord := getCoordinateProperties(cursorPosCoordinate, cursorPosNextCoord)
+	insertCoord := findIntermediateCoordinate(cursorPosCoordinate, cursorPosNextCoord, uID)
 
-	d.Textcontent = Insertion(letter, insertCoord, d.Textcontent, uID)
+	var location CoordT = CoordT{
+		Coordinate: insertCoord,
+		ID:         uID,
+	}
+
+	d.Textcontent = Insertion(letter, location, d.Textcontent, uID)
 	d.CursorForward()
 
 }
@@ -284,10 +312,15 @@ func (d *Document) Delete() {
 
 func NewDocument() Document {
 
+	var location CoordT = CoordT{
+		Coordinate: []int{0},
+		ID:         0,
+	}
+
 	// BOD = Beginning Of File
 	BOF := Item{
 		Letter:     "",
-		Coordinate: []int{0},
+		Coordinate: location,
 		ID:         0,
 		Next:       nil,
 		Prev:       nil,
