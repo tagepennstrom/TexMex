@@ -21,6 +21,8 @@ type EditDocMessage struct {
 	Document string `json:"document"`
 }
 
+const filename = "document"
+
 var document = ""
 var connections []*websocket.Conn
 
@@ -91,9 +93,7 @@ func compileDocument(w http.ResponseWriter, r *http.Request) {
 	}
 	r.Body.Close()
 
-	const filename = "document"
 	filenameLatex := fmt.Sprintf("%s.tex", filename)
-	filenamePdf := fmt.Sprintf("%s.pdf", filename)
 
 	const writeReadPermission = os.FileMode(0666)
 	err = os.WriteFile(filenameLatex, document, writeReadPermission)
@@ -113,7 +113,12 @@ func compileDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Fprintf(w, `{"pdfUrl": "/pdf"}`)
+}
+
+func servePdf(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/pdf")
+	filenamePdf := fmt.Sprintf("%s.pdf", filename)
 	http.ServeFile(w, r, filenamePdf)
 }
 
@@ -124,16 +129,6 @@ func middleware(handlerFunc http.HandlerFunc) http.HandlerFunc {
 		log.Printf("%s %s\n", r.Method, r.RequestURI)
 		handlerFunc(w, r)
 	}
-}
-
-func servePdf(w http.ResponseWriter, r *http.Request) {
-
-	// Log the request to verify the endpoint is being hit
-	fmt.Println("Serving PDF file...")
-
-	// Serve the PDF file with the correct content type
-	w.Header().Set("Content-Type", "application/pdf")
-	http.ServeFile(w, r, "document.pdf")
 }
 
 func main() {

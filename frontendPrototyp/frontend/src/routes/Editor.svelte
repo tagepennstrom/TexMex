@@ -1,6 +1,4 @@
 <script lang='ts'>
-    export let latexContent: string;
-    export let onCompile: (content: string) => void; // Update the type to accept content
     import {basicSetup, EditorView} from "codemirror"
     import {onMount} from 'svelte'
     import {EditorState} from "@codemirror/state"
@@ -9,58 +7,40 @@
     } from '@codemirror/language'
     import { stex } from "@codemirror/legacy-modes/mode/stex"
 
-    let editor: HTMLDivElement | null = null; // Reference to the editor container
-    let editorView: EditorView | null = null;
+    let latexContent = $state("");
+    let { compileLatex } = $props();
 
+    let editor: HTMLDivElement;
+    let editorView: EditorView;
 
     onMount(() => {
-        if (editor) {
-            // Initialize CodeMirror editor
-            editorView = new EditorView({
-                state: EditorState.create({
-                    doc: latexContent,
-                    extensions: [
-                        basicSetup,
-                        StreamLanguage.define(stex)
-                    ]
-                }),
-                parent: editor
-            });
-        }
+        // Load saved content from localStorage only in the browser
+        latexContent = localStorage.getItem("latexContent") || "";
 
-        return () => {
-            editorView?.destroy(); // Clean up editor on component destroy
-        };
+        // Initialize CodeMirror editor
+        editorView = new EditorView({
+            state: EditorState.create({
+                doc: latexContent,
+                extensions: [
+                    basicSetup,
+                    StreamLanguage.define(stex)
+                ]
+            }),
+            parent: editor
+        });
     });
 
     function compileContent() {
-        if (editorView) {
-            const content = editorView.state.doc.toString(); // Get the current content from CodeMirror
-            onCompile(content); // Pass the content to the compile function
-        }
+        const content = editorView.state.doc.toString(); // Get the current content from CodeMirror
+        compileLatex(content);
     }
-``
 </script>
 
 
-<button on:click={() => compileContent()}>Compile</button> <!-- Pass the latest content -->
-<p></p>
-
+<button onclick={() => compileContent()}>Compile</button>
 <div class="editor" bind:this={editor}></div>
 
-<!-- <textarea 
-    name="Edit" placeholder="Write LaTex here"
-    bind:value={latexContent}
-    bind:this={textareaRef}
-></textarea> -->
-
 <style>
-    textarea {
-        width: 49%;
-        height: 700px;
-        float: left;
-        margin: auto;
-    }
     .editor {
         height: 700px;
         width: 49%;
@@ -69,7 +49,7 @@
     }
 
     button {
-        display: block; /* Make the button a block element */
+        display: block;
         margin: 10px auto; /* Center the button horizontally */
         padding: 10px 20px;
         background-color: darkorange;
