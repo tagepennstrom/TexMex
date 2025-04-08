@@ -2,6 +2,7 @@
     import Header from './Header.svelte';
     import Viewer from './Viewer.svelte';
     import Editor from './Editor.svelte';
+    import SentOutput from './SentOutput.svelte';
 
     let latexContent = "";
     let pdfUrl: string | null = "http://localhost:8080/pdf";
