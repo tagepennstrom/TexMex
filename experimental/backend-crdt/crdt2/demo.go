@@ -62,7 +62,7 @@ func processInput() {
 	var debugOn bool = false
 
 	for {
-		fmt.Println("(Press '0' to exit. Press '9' for debug screen. Press '1' to simulate another user typing, '2' to reset cursor, '3' to print letter list from start)")
+		fmt.Println("(Press '0' to exit. Press '9' for debug screen. Press '1' to simulate another user typing, '2' to reset cursor, '3' to reset coordinates)")
 
 		char, key, err := keyboard.GetKey()
 		if err != nil {
@@ -88,12 +88,7 @@ func processInput() {
 				doc.DisplayWithCursor()
 		
 		} else if char == '3' {
-			doc.MoveCursor(0)
-			current1 := doc.Textcontent.Head.Next
-			for i := 0; i < doc.Textcontent.Length; i++{
-				fmt.Print("Current letter: ", current1.Letter, " is position ", i, "\n")
-				current1 = current1.Next
-			}
+			doc.CordReset()
 
 		} else if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') {
 			doc.letterAction(char)

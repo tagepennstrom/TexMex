@@ -388,3 +388,16 @@ func NewDocument() Document {
 
 	return d
 }
+
+func (d*Document) CordReset() {
+	length := d.Textcontent.Length
+	if length < 1{
+		return
+	}
+
+	current := d.Textcontent.Head.Next
+	for i := 1; i <= length; i++{
+		current.Location.Coordinate = []int{i}
+		current = current.Next
+	}
+}
