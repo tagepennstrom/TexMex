@@ -10,7 +10,6 @@
 
 
     let { compileLatex } = $props();
-    const serverUrl = "http://localhost:8080";
     let socket: WebSocket;
 
     let broadcastUpdate = false;
@@ -29,6 +28,7 @@
     }
 
     onMount(() => {
+        const serverUrl = `http://${location.hostname}:8080`;
         socket = new WebSocket(`${serverUrl}/editDocWebsocket`);
 
         socket.addEventListener("message", (event) => {

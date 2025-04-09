@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -14,8 +16,7 @@ import (
 	"github.com/coder/websocket/wsjson"
 )
 
-const frontendHost = "localhost:5173"
-const serverAddress = "localhost:8080"
+const frontendPort = "5173";
 
 type EditDocMessage struct {
 	Document string `json:"document"`
@@ -28,6 +29,23 @@ var document = `\documentclass{article}
 abcd
 \end{document}`
 var connections []*websocket.Conn
+
+func getLocalIP() (string, error) {
+	addresses, err := net.InterfaceAddrs()
+	if err != nil {
+		return "", err
+	}
+
+	for _, address := range addresses {
+		ipnet, ok := address.(*net.IPNet)
+		if ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String(), nil
+			}
+		}
+	}
+	return "", errors.New("Unable to find local IP address")
+}
 
 func getDocument(w http.ResponseWriter, r *http.Request) {
 	_, err := w.Write([]byte(document))
@@ -62,6 +80,8 @@ func removeConn(connToDelete *websocket.Conn) []*websocket.Conn {
 }
 
 func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
+	ip, _ := getLocalIP()
+	frontendHost := fmt.Sprintf("%s:%s", ip, "5173")
 	opts := websocket.AcceptOptions{
 		OriginPatterns: []string{frontendHost},
 	}
@@ -129,7 +149,8 @@ func servePdf(w http.ResponseWriter, r *http.Request) {
 }
 
 func middleware(handlerFunc http.HandlerFunc) http.HandlerFunc {
-	frontendUrl := fmt.Sprintf("http://%s", frontendHost)
+	ip, _ := getLocalIP()
+	frontendUrl := fmt.Sprintf("http://%s:%s", ip, frontendPort)
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Access-Control-Allow-Origin", frontendUrl)
 		log.Printf("%s %s\n", r.Method, r.RequestURI)
@@ -138,6 +159,9 @@ func middleware(handlerFunc http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
+	const port = "8080"
+	ip, _ := getLocalIP()
+	serverAddress := fmt.Sprintf("%s:%s", ip, port)
 	log.Printf("Server running on %s\n", serverAddress)
 
 	http.HandleFunc("/document", middleware(getDocument))
