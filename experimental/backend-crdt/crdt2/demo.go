@@ -12,30 +12,30 @@ import (
 )
 
 func liveUserDemo(d *Document) {
-	arr := []string{" (Hello Antwan!) ",
-					" (Hungry Hippos) ",
-					" (We the best music) ",
-					" (God did) ",
-					" (Another one) ",
-					" (Bless up) ",
-					" (Major key) ",
-					" (Stay away from 'they') ",
-					" (Secure the bag) ",
-					" (Don't play yourself) ",
-					" (They don't want you to win) ",
-					" (Lion!) ",
-					" (I'm up to something) ",
-					" (You smart) ",
-					" (You loyal) ",
-					" (Celebrate success) ",
-					" (Keep going) ",}
+	arr := []string{"(Hello Antwan!) ",
+					"(Hungry Hippos) ",
+					"(We the best music) ",
+					"(God did) ",
+					"(Another one) ",
+					"(Bless up) ",
+					"(Major key) ",
+					"(Stay away from 'they') ",
+					"(Secure the bag) ",
+					"(Don't play yourself) ",
+					"(They don't want you to win) ",
+					"(Lion!) ",
+					"(I'm up to something) ",
+					"(You smart) ",
+					"(You loyal) ",
+					"(Celebrate success) ",
+					"(Keep going) ",}
 
 	wordIndexChosen := rand.Int() % len(arr)
 
 	word := arr[wordIndexChosen]
 	wordLen := len(word)
 
-	pos := rand.Int() % d.Textcontent.Length
+	pos := rand.Int() % d.Textcontent.Length 
 
 	r2 := rand.New(rand.NewSource(time.Now().UnixNano()))
 
@@ -58,10 +58,11 @@ func processInput() {
 	defer keyboard.Close()
 
 	doc := NewDocument()
+
 	var debugOn bool = false
 
 	for {
-		fmt.Println("(Press '0' to exit. Press '9' for debug screen. Press '1' to simulate another user typing)")
+		fmt.Println("(Press '0' to exit. Press '9' for debug screen. Press '1' to simulate another user typing, '2' to reset cursor, '3' to print letter list from start)")
 
 		char, key, err := keyboard.GetKey()
 		if err != nil {
@@ -81,12 +82,27 @@ func processInput() {
 		} else if char == '1' {
 			go liveUserDemo(&doc)
 
+		} else if char == '2' {
+				doc.MoveCursor(0)
+				fmt.Print("\033[H\033[2J")
+				doc.DisplayWithCursor()
+		
+		} else if char == '3' {
+			doc.MoveCursor(0)
+			current1 := doc.Textcontent.Head.Next
+			for i := 0; i < doc.Textcontent.Length; i++{
+				fmt.Print("Current letter: ", current1.Letter, " is position ", i, "\n")
+				current1 = current1.Next
+			}
+
 		} else if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') {
 			doc.letterAction(char)
 		} else if key == keyboard.KeyArrowLeft {
 			doc.leftArrowAction()
+			//fmt.Print("This is the letter to my left: ", doc.CursorPosition.Prev.Letter, "\n")
 		} else if key == keyboard.KeyArrowRight {
 			doc.rightArrowAction()
+			//fmt.Print("This is the letter to my right: ", doc.CursorPosition.Next.Letter, "\n")
 		} else if key == keyboard.KeyBackspace2 || key == keyboard.KeyBackspace {
 			doc.deleteAction()
 		} else if key == keyboard.KeySpace {

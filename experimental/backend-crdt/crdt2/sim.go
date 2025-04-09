@@ -40,6 +40,45 @@ func (d *Document) Debug(extraInfo bool) {
 	d.PrintDocument(extraInfo)
 	println("----------------------")
 
+	println("THREE BIG BOOMS")
+	//current := d.Textcontent.Head.Next
+	//prev := d.Textcontent.Head
+	//for i := 0; i < d.Textcontent.Length; i++{
+		//fmt.Print("'"+current.Letter+"' " , "is number: " , i , "In the linked list")
+		//print("\n")
+		//fmt.Print("Is the prev my prev? ", prev.Letter, " ------------->>>> ", current.Prev.Letter)
+		//print("\n")
+		d.moveCursorAndPrint()		
+		//prev = current
+		//current = current.Next
+	//}
+
+}
+
+func (d *Document) moveCursorAndPrint(){
+	d.MoveCursor(1)
+
+	println("Forward stepping")
+	println("--------------------")
+	for i := 0; i < d.Textcontent.Length; i++{
+		fmt.Print("cursor step", i ," = ")
+		fmt.Print(d.CursorPosition.Letter)
+		print("\n")
+		d.CursorForward()
+	}
+
+	d.MoveCursor(d.Textcontent.Length)
+
+	print("\n")
+
+	println("Backward stepping")
+	println("--------------------")
+	for j := 0; j < d.Textcontent.Length; j++{
+		fmt.Print("cursor step", j ," = ")
+		fmt.Print(d.CursorPosition.Letter)
+		print("\n")
+		d.CursorBackwards()
+	}
 }
 
 func (d *Document) PrintDocument(verbose bool) {
@@ -63,14 +102,16 @@ func (d *Document) CompileToText() string {
 }
 
 func (d *Document) CoordToIndex(coord *Item) int {
-
 	cur := d.Textcontent.Head
 	index := 0
-	for (cur.ID != coord.ID) || (cur.Letter != coord.Letter) {
+	for cur != nil {
+		if cur == coord {
+			return index
+		}
 		cur = cur.Next
 		index++
 	}
-	return index
+	return -1 // Not found
 }
 
 func (d *Document) DisplayWithCursor() {
@@ -110,16 +151,16 @@ func main() {
 	processInput()
 	//runAllTests() // <- Antons tester (ligger i tests.go)
 
-	d := NewDocument()
+	//d := NewDocument()
 
-	d.Insert("a", 1)
-	d.Insert("a", 1)
-	d.Insert("a", 1)
+	//d.Insert("a", 1)
+	//d.Insert("a", 1)
+	//d.Insert("a", 1)
 
-	d.DisplayWithCursor()
+	//d.DisplayWithCursor()
 
-	d.LoadInsert("b", 2, 3)
+	//d.LoadInsert("b", 2, 3)
 
-	d.DisplayWithCursor()
+	//d.DisplayWithCursor()
 
 }
