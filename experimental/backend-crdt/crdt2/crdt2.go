@@ -190,6 +190,7 @@ func Insertion(letter string, coordinate CoordT, db LinkedList, uID int) LinkedL
 	nextItem.Prev = &newItem
 	newItem.Next = nextItem
 
+
 	return db
 }
 
@@ -316,7 +317,6 @@ func (d *Document) LoadInsert(letter string, index int, uID int) {
 	}
 
 	d.Textcontent = Insertion(letter, location, d.Textcontent, uID)
-
 }
 
 func (d *Document) MoveCursor(index int) {
