@@ -40,7 +40,7 @@ func (d *Document) Debug(extraInfo bool) {
 	d.PrintDocument(extraInfo)
 	println("----------------------")
 
-	println("THREE BIG BOOMS")
+	//println("THREE BIG BOOMS")
 	//current := d.Textcontent.Head.Next
 	//prev := d.Textcontent.Head
 	//for i := 0; i < d.Textcontent.Length; i++{
@@ -48,7 +48,7 @@ func (d *Document) Debug(extraInfo bool) {
 		//print("\n")
 		//fmt.Print("Is the prev my prev? ", prev.Letter, " ------------->>>> ", current.Prev.Letter)
 		//print("\n")
-		d.moveCursorAndPrint()		
+		//d.moveCursorAndPrint()		
 		//prev = current
 		//current = current.Next
 	//}
