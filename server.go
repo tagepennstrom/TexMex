@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -16,7 +15,7 @@ import (
 	"github.com/coder/websocket/wsjson"
 )
 
-const frontendPort = "5173";
+const frontendPort = "5173"
 
 type EditDocMessage struct {
 	Document string `json:"document"`
@@ -31,20 +30,14 @@ abcd
 var connections []*websocket.Conn
 
 func getLocalIP() (string, error) {
-	addresses, err := net.InterfaceAddrs()
+	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
 		return "", err
 	}
+	defer conn.Close()
 
-	for _, address := range addresses {
-		ipnet, ok := address.(*net.IPNet)
-		if ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				return ipnet.IP.String(), nil
-			}
-		}
-	}
-	return "", errors.New("Unable to find local IP address")
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	return localAddr.IP.String(), nil
 }
 
 func getDocument(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +53,7 @@ func broadcastMessage(ctx context.Context, message EditDocMessage, sender *webso
 	log.Printf("Broadcasting to %d clients\n", len(connections))
 	log.Printf("Broadcasting message: %v\n", message)
 	for _, c := range connections {
-		if (c == sender) {
+		if c == sender {
 			continue
 		}
 		err := wsjson.Write(ctx, c, message)
