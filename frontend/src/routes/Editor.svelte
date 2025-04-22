@@ -12,7 +12,7 @@
     let { compileLatex } = $props();
     let socket: WebSocket;
 
-    let broadcastUpdate = false;
+    let broadcastUpdate = $state(false);
 
     let editor: HTMLElement;
     let editorView: EditorView;
@@ -24,7 +24,6 @@
             document: editorView.state.doc.toString(),
         };
         socket.send(JSON.stringify(message));
-        broadcastUpdate = false;
     }
 
     onMount(() => {
@@ -42,6 +41,7 @@
                     insert: res.document,
                 }
             });
+            broadcastUpdate = false;
         });
 
         fetch(`${serverUrl}/document`)
