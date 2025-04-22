@@ -2,6 +2,7 @@
     import Header from './Header.svelte';
     import Viewer from './Viewer.svelte';
     import Editor from './Editor.svelte';
+    import Footer from './Footer.svelte';
 
 
     let pdfUrl = $state("");
@@ -25,6 +26,36 @@
     }
 </script>
 
-<Header/>
-<Editor {compileLatex} />
-<Viewer {pdfUrl} {compileCount}/>
+
+
+<div class="page-container">
+    <Header/>
+    <div class="content">
+        <div class="toolbar">
+            <Toolbar/>
+        </div>
+        <button class="compile-button" onclick={compileLatex(content)}>Compile</button>
+        <Editor {compileLatex} />
+        <Viewer {pdfUrl} {compileCount}/>
+    </div>
+    <Footer/>
+</div>
+
+<style>
+    .page-container {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+
+    .content {
+        flex: 1;
+    }
+
+    .compile-button {
+        float: top;
+    }
+    
+
+</style>
+

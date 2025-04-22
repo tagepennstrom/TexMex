@@ -3,9 +3,7 @@
     import {onMount} from 'svelte'
     import {EditorState} from "@codemirror/state"
     import {ViewUpdate} from "@codemirror/view"
-    import {
-        StreamLanguage,
-    } from '@codemirror/language'
+    import {StreamLanguage,} from '@codemirror/language'
     import { stex } from "@codemirror/legacy-modes/mode/stex"
 
 
@@ -27,6 +25,20 @@
         socket.send(JSON.stringify(message));
         broadcastUpdate = false;
     }
+
+    
+    const fixedHeightEditor = EditorView.theme({
+        "&": {height: "700px"},
+        ".cm-scroller": {overflow: "auto"}
+    })
+
+    const extensions = [
+        basicSetup,
+        StreamLanguage.define(stex),
+        EditorView.updateListener.of(onUpdate),
+        fixedHeightEditor
+    ]
+
 
     onMount(() => {
         socket = new WebSocket(`${serverUrl}/editDocWebsocket`);
@@ -51,16 +63,13 @@
                 editorView = new EditorView({
                     state: EditorState.create({
                         doc: text,
-                        extensions: [
-                            basicSetup,
-                            StreamLanguage.define(stex),
-                            EditorView.updateListener.of(onUpdate),
-                        ]
+                        extensions
                     }),
                     parent: editor
                 });
             });
     });
+
 
     function compileContent() {
         const content = editorView.state.doc.toString(); // Get the current content from CodeMirror
@@ -81,14 +90,13 @@
     }
 
     button {
-        display: block;
-        margin: 10px auto; /* Center the button horizontally */
         padding: 10px 20px;
         background-color: darkorange;
         color: white;
         border: none;
         border-radius: 5px;
         cursor: pointer;
+        align-items:flex-start;
     }
 
     button:hover {
