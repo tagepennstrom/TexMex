@@ -17,8 +17,15 @@ import (
 
 const frontendPort = "5173"
 
+type Change struct {
+	From int    `json:"from"` // Start index
+	To   int    `json:"to"`   // Slut index
+	Text string `json:"text"` // Tillagd text
+}
+
 type EditDocMessage struct {
-	Document string `json:"document"`
+	Document string   `json:"document"`
+	Changes  []Change `json:"changes"`
 }
 
 const filename = "document"
@@ -97,6 +104,7 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log.Printf("Received: %v\n", editDocMessage)
+		log.Printf("Changes made: %v\n", editDocMessage.Changes)
 		document = editDocMessage.Document
 		broadcastMessage(ctx, editDocMessage, c)
 	}
