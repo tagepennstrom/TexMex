@@ -3,6 +3,7 @@
     import Viewer from './Viewer.svelte';
     import Editor from './Editor.svelte';
     import Footer from './Footer.svelte';
+	import Toolbar from './Toolbar.svelte';
 
 
     let pdfUrl = $state("");
@@ -34,7 +35,7 @@
         <div class="toolbar">
             <Toolbar/>
         </div>
-        <button class="compile-button" onclick={compileLatex(content)}>Compile</button>
+        <!-- <button class="compile-button" onclick={compileLatex(content)}>Compile</button> -->
         <Editor {compileLatex} />
         <Viewer {pdfUrl} {compileCount}/>
     </div>
