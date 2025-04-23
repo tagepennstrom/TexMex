@@ -17,8 +17,15 @@ import (
 const frontendHost = "localhost:5173"
 const serverAddress = "localhost:8080"
 
+type Change struct {
+	From int    `json:"from"` // Start index
+	To   int    `json:"to"`   // Slut index
+	Text string `json:"text"` // Tillagd text
+}
+
 type EditDocMessage struct {
-	Document string `json:"document"`
+	Document string   `json:"document"`
+	Changes  []Change `json:"changes"`
 }
 
 const filename = "document"
@@ -42,7 +49,7 @@ func broadcastMessage(ctx context.Context, message EditDocMessage, sender *webso
 	log.Printf("Broadcasting to %d clients\n", len(connections))
 	log.Printf("Broadcasting message: %v\n", message)
 	for _, c := range connections {
-		if (c == sender) {
+		if c == sender {
 			continue
 		}
 		err := wsjson.Write(ctx, c, message)
@@ -84,6 +91,7 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log.Printf("Received: %v\n", editDocMessage)
+		log.Printf("Changes made: %v\n", editDocMessage.Changes)
 		document = editDocMessage.Document
 		broadcastMessage(ctx, editDocMessage, c)
 	}

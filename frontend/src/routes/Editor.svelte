@@ -16,12 +16,38 @@
     let editor: HTMLElement;
     let editorView: EditorView;
 
+    
+    type Change = {
+        from: number;   // Start index
+        to: number;     // Slut index
+        text: string;   // Tillagd text, tom vid borttagning
+    }
+    
+    type Message = {
+        document: string;
+        changes: Change
+    }
+
     function onUpdate(update: ViewUpdate) {
         if (!update.docChanged || broadcastUpdate) return;
-        console.log(update);
+        
+        //Skickar bara det som ändras
+        const changes: Change[] = [];
+        update.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
+            changes.push({
+                from: fromA, 
+                to: toA,     
+                text: inserted.toString() // Tillagd text, tom vid borttagning
+            });
+        });
+        
+        // Skickar hela dokumentet
         const message = {
             document: editorView.state.doc.toString(),
+            changes: changes
         };
+        console.log("Sending message:", message);
+        console.log("Changes:", message.changes);
         socket.send(JSON.stringify(message));
         broadcastUpdate = false;
     }

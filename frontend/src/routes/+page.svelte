@@ -53,9 +53,6 @@
         flex: 1;
     }
 
-    .compile-button {
-        float: top;
-    }
     
 
 </style>
