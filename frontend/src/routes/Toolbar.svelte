@@ -1,19 +1,21 @@
-<script>
+<script lang="ts">
+    import { insertBold } from '$lib/index';
 
+    function makeBold() {
+        insertBold();
+    }
 </script>
 
-<button class="compile">compile</button>
+<button class="Bald" onclick={makeBold}>Bold</button>
 
 
 <style>
-    .compile {
+    .Bald {
         padding: 10px 20px;
-        background-color: darkorange;
+        background-color: rgb(246, 137, 4);
         color: white;
         border: none;
         border-radius: 5px;
         cursor: pointer;
-        align-items:flex-start;
     }
-
 </style>

@@ -1,24 +1,24 @@
-<script lang='ts'>
-    import {basicSetup, EditorView} from "codemirror"
-    import {onMount} from 'svelte'
-    import {EditorState} from "@codemirror/state"
-    import {ViewUpdate} from "@codemirror/view"
-    import {StreamLanguage,} from '@codemirror/language'
-    import { stex } from "@codemirror/legacy-modes/mode/stex"
-
+<script lang="ts">
+    import { basicSetup, EditorView } from "codemirror";
+    import { onMount } from "svelte";
+    import { EditorState } from "@codemirror/state";
+    import { ViewUpdate } from "@codemirror/view";
+    import { StreamLanguage } from "@codemirror/language";
+    import { stex } from "@codemirror/legacy-modes/mode/stex";
+    import { get } from "svelte/store";
+    import { editorView as editorViewStore } from "$lib/stores";
 
     let { compileLatex } = $props();
     const serverUrl = "http://localhost:8080";
+
     let socket: WebSocket;
-
     let broadcastUpdate = false;
-
     let editor: HTMLElement;
     let editorView: EditorView;
 
     function onUpdate(update: ViewUpdate) {
         if (!update.docChanged || broadcastUpdate) return;
-        console.log(update);
+
         const message = {
             document: editorView.state.doc.toString(),
         };
@@ -26,40 +26,40 @@
         broadcastUpdate = false;
     }
 
-    
     const fixedHeightEditor = EditorView.theme({
-        "&": {height: "700px"},
-        ".cm-scroller": {overflow: "auto"}
-    })
+        "&": { height: "700px" },
+        ".cm-scroller": { overflow: "auto" }
+    });
 
     const extensions = [
         basicSetup,
         StreamLanguage.define(stex),
         EditorView.updateListener.of(onUpdate),
         fixedHeightEditor
-    ]
-
+    ];
 
     onMount(() => {
         socket = new WebSocket(`${serverUrl}/editDocWebsocket`);
 
         socket.addEventListener("message", (event) => {
             const res = JSON.parse(event.data);
-            console.log(event);
             broadcastUpdate = true;
-            editorView.dispatch({
-                changes: {
-                    from: 0,
-                    to: editorView.state.doc.length,
-                    insert: res.document,
-                }
-            });
+
+            const view = get(editorViewStore);
+            if (view) {
+                view.dispatch({
+                    changes: {
+                        from: 0,
+                        to: view.state.doc.length,
+                        insert: res.document
+                    }
+                });
+            }
         });
 
         fetch(`${serverUrl}/document`)
             .then(res => res.text())
             .then(text => {
-                // Initialize CodeMirror editor
                 editorView = new EditorView({
                     state: EditorState.create({
                         doc: text,
@@ -67,18 +67,20 @@
                     }),
                     parent: editor
                 });
+
+                // 👇 Spara editorn i store för delning med Toolbar
+                editorViewStore.set(editorView);
             });
     });
 
-
     function compileContent() {
-        const content = editorView.state.doc.toString(); // Get the current content from CodeMirror
+        const content = editorView.state.doc.toString();
         compileLatex(content);
     }
 </script>
 
-
-<button onclick={() => compileContent()}>Compile</button>
+<!-- UI -->
+<button on:click={compileContent}>Compile</button>
 <div id="editor" bind:this={editor}></div>
 
 <style>
@@ -96,7 +98,7 @@
         border: none;
         border-radius: 5px;
         cursor: pointer;
-        align-items:flex-start;
+        align-items: flex-start;
     }
 
     button:hover {
