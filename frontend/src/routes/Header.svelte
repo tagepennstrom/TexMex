@@ -2,22 +2,10 @@
 
 </script>
 
-<div class="Header">
-    <img src="/LogoTest.png" alt="Our Beautiful Logo" />
-</div>
-
+<h1>TexMex</h1>
 
 <style>
-
-    .Header{
-        background-color :#e0f7fa;
-    }
-
-    img {
-        display: block;
-        margin: 0 auto;
-        max-width: 10%;
-        background-color :#e0f7fa;
-        height: auto;
+    h1 {
+        text-align: center;
     }
 </style>
