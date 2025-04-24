@@ -46,7 +46,7 @@
     }
 
     const BlockLocalChanges = EditorState.transactionFilter.of(tr => {
-        if (tr.docChanged) {
+        if (tr.docChanged && !broadcastUpdate) {
             sendChangesToCrdt(tr);
             return []; // Blocka ändringar lokalt genom att skicka tillbaka inga
         }
