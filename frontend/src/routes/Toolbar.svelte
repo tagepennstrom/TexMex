@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { insertBold, insertItalic, insertUnderline } from '$lib/index';
+    import { insertBold, insertItalic, insertUnderline, compile } from '$lib/index';
     import { onMount, onDestroy } from 'svelte';
 
     let handleKeydown: (event: KeyboardEvent) => void;

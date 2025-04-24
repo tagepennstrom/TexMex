@@ -6,7 +6,7 @@
     import { StreamLanguage } from "@codemirror/language";
     import { stex } from "@codemirror/legacy-modes/mode/stex";
     import { get } from "svelte/store";
-    import { compileLatexStore, editorView as editorViewStore } from "$lib/stores";
+    import { editorView as editorViewStore , compileLatexStore} from "$lib/stores";
 
     let { compileLatex } = $props();
     const serverUrl = "http://localhost:8080";
@@ -68,11 +68,12 @@
                     parent: editor
                 });
 
-                // Spara editorn i store för delning med Toolbar
+                // 👇 Spara editorn i store för delning med Toolbar
                 editorViewStore.set(editorView);
                 compileLatexStore.set(compileLatex);
             });
     });
+
 
 </script>
 
@@ -87,5 +88,4 @@
         float: left;
         margin: auto;
     }
-
-</style>
+    </style>
