@@ -1,10 +1,12 @@
 <script lang='ts'>
     import {basicSetup, EditorView} from "codemirror"
     import {onMount} from 'svelte'
-    import {EditorState} from "@codemirror/state"
+    import {EditorState, Transaction} from "@codemirror/state"
     import {ViewUpdate} from "@codemirror/view"
     import {StreamLanguage,} from '@codemirror/language'
     import { stex } from "@codemirror/legacy-modes/mode/stex"
+
+
 
 
     let { compileLatex } = $props();
@@ -26,25 +28,30 @@
         changes: Change[]
     }
 
-    function onUpdate(update: ViewUpdate) {
-        if (!update.docChanged || broadcastUpdate) return;
-        
-        //Skickar bara det som ändras
+    function sendChangesToCrdt(tr: Transaction): void {
         const changes: Change[] = [];
-        update.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
-            changes.push({
-                from: fromA, 
-                to: toA,     
-                text: inserted.toString() // Tillagd text, tom vid borttagning
+            tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
+                changes.push({
+                    from: fromA, 
+                    to: toA,     
+                    text: inserted.toString() // Tillagd text, tom vid borttagning
+                });
             });
-        });
-        
-        const message: Message = {
-            changes: changes
-        };
-        console.log("Sending message:", message);
-        socket.send(JSON.stringify(message));
+
+            const message: Message = {
+                changes: changes
+            };
+            console.log("Sending message:", message);
+            socket.send(JSON.stringify(message));
     }
+
+    const BlockLocalChanges = EditorState.transactionFilter.of(tr => {
+        if (tr.docChanged && !broadcastUpdate) {
+            sendChangesToCrdt(tr);
+            return []; // Blocka ändringar lokalt genom att skicka tillbaka inga
+        }
+        return tr; // Inga ändringar var gjorda men vi måste returna.
+    })
 
     
     const fixedHeightEditor = EditorView.theme({
@@ -55,8 +62,8 @@
     const extensions = [
         basicSetup,
         StreamLanguage.define(stex),
-        EditorView.updateListener.of(onUpdate),
-        fixedHeightEditor
+        fixedHeightEditor,
+        BlockLocalChanges
     ]
 
 
@@ -74,7 +81,10 @@
                         from: change.from,
                         to: change.to,
                         insert: change.text,
-                    }
+                    },
+                    selection: {
+                        anchor: change.to + 1,
+                    },
                 });
             });
             broadcastUpdate = false;
