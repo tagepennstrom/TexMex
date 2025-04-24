@@ -2,7 +2,6 @@
     import {basicSetup, EditorView} from "codemirror"
     import {onMount} from 'svelte'
     import {EditorState, Transaction} from "@codemirror/state"
-    import {ViewUpdate} from "@codemirror/view"
     import {StreamLanguage,} from '@codemirror/language'
     import { stex } from "@codemirror/legacy-modes/mode/stex"
 

@@ -24,7 +24,7 @@ type Change struct {
 }
 
 type EditDocMessage struct {
-	Changes  []Change `json:"changes"`
+	Changes []Change `json:"changes"`
 }
 
 const filename = "document"
@@ -59,9 +59,9 @@ func broadcastMessage(ctx context.Context, message EditDocMessage, sender *webso
 	log.Printf("Broadcasting to %d clients\n", len(connections))
 	log.Printf("Broadcasting message: %v\n", message)
 	for _, c := range connections {
-		if c == sender {
+		/* if c == sender {
 			continue
-		}
+		} */
 		err := wsjson.Write(ctx, c, message)
 		if err != nil {
 			log.Printf("Failed to write websocket message: %s", err)
