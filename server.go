@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -26,7 +27,13 @@ type Change struct {
 }
 
 type EditDocMessage struct {
-	Changes []Change `json:"changes"`
+	Document string `json:"document"`
+	Changes  []Change `json:"changes"`
+}
+
+type UpdatedDocMessage struct {
+	Document string `json:"document"`
+	CursorIndex int `json:"cursorIndex"`
 }
 
 const filename = "document"
@@ -58,6 +65,36 @@ func getDocument(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// This should not be needed when using wasm
+func updateDocument(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var editDocMessage EditDocMessage
+	err := decoder.Decode(&editDocMessage)
+	if err != nil {
+		errorMessage := fmt.Sprintf("Failed to update document: %s", err)
+		log.Println(errorMessage)
+		http.Error(w, errorMessage, http.StatusBadRequest)
+		return
+	}
+	doc := crdt.DocumentFromStr(editDocMessage.Document)
+	for i, change := range editDocMessage.Changes {
+		if i == 0 {
+			doc.SetCursorAt(change.From - 1)
+		}
+		uID := 0
+		for i := change.From; i <= change.To; i++ {
+			doc.Insert(string(change.Text[i - change.From]), uID)
+		}
+	}
+
+	updatedDocMessage := UpdatedDocMessage{
+		Document: doc.ToString(),
+		CursorIndex: doc.CursorIndex(),
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updatedDocMessage)
+}
+
 func broadcastMessage(ctx context.Context, message EditDocMessage, sender *websocket.Conn) {
 	log.Printf("Broadcasting to %d clients\n", len(connections))
 	log.Printf("Broadcasting message: %v\n", message)
@@ -79,15 +116,6 @@ func removeConn(connToDelete *websocket.Conn) []*websocket.Conn {
 		}
 	}
 	return connections
-}
-
-func updateDocument(changes []Change) {
-	for _, change := range changes {
-		uID := 0
-		for i := change.From; i < change.To; i++ {
-			document.Insert(change.Text[i - change.From], i, uID)
-		}
-	}
 }
 
 func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
@@ -115,7 +143,6 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log.Printf("Changes made: %v\n", editDocMessage)
-		updateDocument(editDocMessage.Changes)
 		broadcastMessage(ctx, editDocMessage, c)
 	}
 }
@@ -164,7 +191,12 @@ func middleware(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	frontendUrl := fmt.Sprintf("http://%s:%s", ip, frontendPort)
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Access-Control-Allow-Origin", frontendUrl)
+		w.Header().Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Add("Access-Control-Allow-Headers", "Content-Type")
 		log.Printf("%s %s\n", r.Method, r.RequestURI)
+  	if r.Method == "OPTIONS" {
+			return
+		}
 		handlerFunc(w, r)
 	}
 }
@@ -176,6 +208,7 @@ func main() {
 	log.Printf("Server running on %s\n", serverAddress)
 
 	http.HandleFunc("/document", middleware(getDocument))
+	http.HandleFunc("/updateDocument", middleware(updateDocument))
 	http.HandleFunc("/editDocWebsocket", editDocWebsocketHandler)
 	http.HandleFunc("/compileDocument", middleware(compileDocument))
 	http.HandleFunc("/pdf", middleware(servePdf))

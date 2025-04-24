@@ -1,6 +1,6 @@
 // OBS måste ladda ner: go get github.com/eiannone/keyboard
 
-package main
+package crdt
 
 import (
 	"fmt"

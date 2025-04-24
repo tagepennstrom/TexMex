@@ -1,17 +1,23 @@
 package crdt
 
 import (
+	"fmt"
 	"os"
 )
 
 type Document struct {
+	CursorPosition *Item
+	Textcontent    LinkedList
+}
+
+type LinkedList struct {
 	Head   *Item
 	Tail   *Item
 	Length int
 }
 
 type Item struct {
-	Char   byte
+	Letter   string
 	Location CoordT // istället för []int här
 	ID       int
 	Prev     *Item
@@ -23,114 +29,98 @@ type CoordT struct {
 	ID         int
 }
 
-func NewDocument() Document {
-	var location CoordT = CoordT{
-		Coordinate: []int{0},
-		ID:         0,
-	}
-
-	// BOF = Beginning Of File
-	BOF := Item{
-		Char:   0,
-		Location: location,
-		ID:       0,
-		Next:     nil,
-		Prev:     nil,
-	}
-	return Document{
-		Head:   &BOF,
-		Tail:   &BOF,
-		Length: 0,
-	}
-}
-
 func DocumentFromStr(str string) Document {
 	doc := NewDocument()
 	for i := range len(str) {
-		doc.Insert(str[i], i, 0)
+		doc.Insert(string(str[i]), 0)
 	}
 	return doc
 }
 
 func (doc *Document) ToString() string {
 	str := ""
-	item := doc.Head.Next
+	item := doc.Textcontent.Head.Next
 	for item != nil {
-		str += string(item.Char)
+		str += item.Letter
 		item = item.Next
 	}
 	return str
 }
 
-func (doc *Document) Insert(char byte, index int, uID int) {
-	coordinate := doc.indexToCoordinate(index, uID)
-	prevItem := findPrevItem(coordinate, *doc)
+func (doc *Document) CursorIndex() int {
+	i := 0
+	item := doc.Textcontent.Head.Next
+	for item != nil {
+		if item == doc.CursorPosition {
+			return i
+		}
+		item = item.Next
+		i++
+	}
+	return i
+}
 
-	newItem := Item{Char: char, Location: coordinate, ID: uID} //prev och next
-	doc.Length++
-
-	// Case 4
-	nextItem := prevItem.Next
-	if nextItem == nil {
-		doc.append(&newItem)
-	} else {
-		prevItem.Next = &newItem
-		newItem.Prev = prevItem
-
-		nextItem.Prev = &newItem
-		newItem.Next = nextItem
+func (doc *Document) SetCursorAt(index int) {
+	i := 0
+	item := doc.Textcontent.Head.Next
+	for item != nil {
+		if i == index {
+			doc.CursorPosition = item
+		}
+		item = item.Next
+		i++
 	}
 }
 
-func (doc *Document) indexToCoordinate(index int, uID int) CoordT {
-	prevItem, caseFour := doc.indexToItem(index)
-
-	// Case 4
-	if caseFour {
-		return getAppendCoordinate(prevItem.Location.Coordinate, uID)
+func (ll *LinkedList) Append(newItem *Item) {
+	if ll.Tail == nil {
+		println("Error: Detta bör aldrig hända")
+		ll.Head = newItem
+		ll.Tail = newItem
+		return
 	}
 
-	nextItem := prevItem.Next
-	coord := findIntermediateCoordinate(prevItem.Location, nextItem.Location)
-	return CoordT{
-		Coordinate: coord,
-		ID:         uID,
-	}
+	ll.Tail.Next = newItem
+	newItem.Prev = ll.Tail
+	ll.Tail = newItem
+	newItem.Next = nil
 }
 
-func (d *Document) indexToItem(index int) (Item, bool) {
-	docLength := d.Length
-	var newPosition Item
-	var atEnd bool = false
+// Returns true if c1 is smaller than c2
+func CompareIndexes(c1 CoordT, c2 CoordT) bool {
 
-	if index >= docLength {
-		index = docLength
-		atEnd = true
+	coord1 := c1.Coordinate
+	coord2 := c2.Coordinate
+	len1 := len(coord1)
+	len2 := len(coord2)
+
+	count := 0
+
+	for count < len1 && count < len2 {
+
+		if coord1[count] > coord2[count] {
+			return true //c1 biggest
+
+		} else if coord1[count] < coord2[count] {
+			return false //c2 biggest
+		}
+		count++
 	}
 
-	if index < 0 {
-		println("Error. Can't move cursor out of bounds")
-		os.Exit(1)
+	if len1 == len2 {
 
-	} else {
-
-		current := d.Head
-		for range index {
-			current = current.Next
+		if c1.ID < c2.ID {
+			return true
+		} else if c2.ID < c1.ID {
+			return false
+		} else {
+			fmt.Errorf("Coordinates are identical")
+			println("Error: Coordinates can't have the same size and ID. This should not happen!")
+			os.Exit(1)
 		}
 
-		newPosition = *current
 	}
-	return newPosition, atEnd
-}
-
-func getAppendCoordinate(prevCoord []int, uID int) CoordT {
-	insertCoord := []int{prevCoord[0] + 1}
-	var newLocation CoordT
-	newLocation.Coordinate = insertCoord
-	newLocation.ID = uID
-
-	return newLocation
+	return len1 > len2
 }
 
 func findIntermediateCoordinate(pCoord CoordT, nCoord CoordT) []int {
@@ -211,24 +201,10 @@ func findIntermediateCoordinate(pCoord CoordT, nCoord CoordT) []int {
 	return newCoordinate
 }
 
-func (doc *Document) append(newItem *Item) {
-	if doc.Tail == nil {
-		println("Error: Detta bör aldrig hända")
-		doc.Head = newItem
-		doc.Tail = newItem
-		return
-	}
-
-	doc.Tail.Next = newItem
-	newItem.Prev = doc.Tail
-	doc.Tail = newItem
-	newItem.Next = nil
-}
-
-func findPrevItem(insertionCoord CoordT, doc Document) *Item {
-	prev := doc.Head
+func findPrevItem(insertionCoord CoordT, db LinkedList) *Item {
+	prev := db.Head
 	for prev.Next != nil {
-		if compareIndexes(prev.Next.Location, insertionCoord) {
+		if CompareIndexes(prev.Next.Location, insertionCoord) {
 			break
 		} else {
 			prev = prev.Next
@@ -237,38 +213,234 @@ func findPrevItem(insertionCoord CoordT, doc Document) *Item {
 	return prev
 }
 
-// Returns true if c1 is smaller than c2
-func compareIndexes(c1 CoordT, c2 CoordT) bool {
+func Insertion(letter string, coordinate CoordT, db LinkedList, uID int) LinkedList {
 
-	coord1 := c1.Coordinate
-	coord2 := c2.Coordinate
-	len1 := len(coord1)
-	len2 := len(coord2)
+	prevItem := findPrevItem(coordinate, db)
 
-	count := 0
+	newItem := Item{Letter: letter, Location: coordinate, ID: uID} //prev och next
+	db.Length++
 
-	for count < len1 && count < len2 {
-
-		if coord1[count] > coord2[count] {
-			return true //c1 biggest
-
-		} else if coord1[count] < coord2[count] {
-			return false //c2 biggest
-		}
-		count++
+	// Case 4
+	nextItem := prevItem.Next
+	if nextItem == nil {
+		db.Append(&newItem)
+		return db
 	}
 
-	if len1 == len2 {
+	prevItem.Next = &newItem
+	newItem.Prev = prevItem
 
-		if c1.ID < c2.ID {
-			return true
-		} else if c2.ID < c1.ID {
-			return false
+	nextItem.Prev = &newItem
+	newItem.Next = nextItem
+
+
+	return db
+}
+
+func Deletion(coordinate CoordT, db LinkedList) LinkedList {
+	prevItem := findPrevItem(coordinate, db)
+
+	itemToRemove := prevItem.Next
+
+	nextItem := itemToRemove.Next
+
+	prevItem.Next = nextItem
+
+	if nextItem != nil {
+		nextItem.Prev = prevItem
+	} else {
+		db.Tail = prevItem
+	}
+
+	db.Length--
+
+	return db
+}
+
+func GetAppendCoordinate(prevCoord []int, uID int) CoordT {
+	insertCoord := []int{prevCoord[0] + 1}
+	var newLocation CoordT
+	newLocation.Coordinate = insertCoord
+	newLocation.ID = uID
+
+	return newLocation
+}
+
+func (d *Document) Insert(letter string, uID int) {
+
+	cursorPosCoordinate := d.CursorPosition.Location // TODO REWRITE, det här är oläsbart
+
+	// Case 4
+	if d.CursorPosition.Next == nil {
+		location := GetAppendCoordinate(cursorPosCoordinate.Coordinate, uID)
+
+		d.Textcontent = Insertion(letter, location, d.Textcontent, uID)
+		d.CursorForward()
+
+		return
+	}
+	cursorPosNextCoord := d.CursorPosition.Next.Location
+
+	insertCoord := findIntermediateCoordinate(cursorPosCoordinate, cursorPosNextCoord)
+
+	var location CoordT = CoordT{
+		Coordinate: insertCoord,
+		ID:         uID,
+	}
+
+	d.Textcontent = Insertion(letter, location, d.Textcontent, uID)
+	d.CursorForward()
+
+}
+
+func (d *Document) CursorForward() {
+	if d.CursorPosition.Next != nil {
+		d.CursorPosition = d.CursorPosition.Next
+
+	} else {
+		println("Can't move cursor further.")
+	}
+}
+
+func (d *Document) CursorBackwards() {
+	// BOF Placeholder har ID 0
+	if d.CursorPosition.ID != 0 {
+		d.CursorPosition = d.CursorPosition.Prev
+
+	} else {
+		println("Error: Can't move cursor further back")
+	}
+}
+
+func (d *Document) IndexToCoordinate(index int) (Item, bool) {
+	docLength := d.Textcontent.Length
+	var newPosition Item
+	var atEnd bool = false
+
+	if index >= docLength {
+		index = docLength
+		atEnd = true
+	}
+
+	if index < 0 {
+		println("Error. Can't move cursor out of bounds")
+		os.Exit(1)
+
+	} else {
+
+		current := d.Textcontent.Head
+		for i := 0; i < index; i++ {
+			current = current.Next
+		}
+
+		newPosition = *current
+	}
+	return newPosition, atEnd
+}
+
+func (d *Document) LoadInsert(letter string, index int, uID int) {
+
+	prevItem, caseFour := d.IndexToCoordinate(index)
+	var newCoordinate CoordT
+
+	fmt.Println(prevItem.Location.Coordinate)
+
+	// Case 4
+	if caseFour {
+		newCoordinate = GetAppendCoordinate(prevItem.Location.Coordinate, uID)
+	}
+
+	fmt.Println(newCoordinate)
+	nextItem := prevItem.Next
+	coord := findIntermediateCoordinate(prevItem.Location, nextItem.Location)
+
+	var location CoordT = CoordT{
+		Coordinate: coord,
+		ID:         uID,
+	}
+
+	d.Textcontent = Insertion(letter, location, d.Textcontent, uID)
+}
+
+func (d *Document) MoveCursor(index int) {
+	docLength := d.Textcontent.Length
+
+	if index > docLength || index < 0 {
+		println("Error. Can't move cursor out of bounds")
+	} else {
+
+		var newPosition Item
+		current := d.Textcontent.Head
+		for i := 0; i < index; i++ {
+			current = current.Next
+		}
+		newPosition = *current
+		d.CursorPosition = &newPosition
+	}
+}
+
+// OBS använder oss bara av current cursor position för deletion just nu
+func (d *Document) Delete() {
+	if d.CursorPosition.Prev != nil {
+		savedCursor := d.CursorPosition
+
+		d.CursorBackwards()
+
+		// Link the previous node to the next node
+		savedCursor.Prev.Next = savedCursor.Next
+
+		if savedCursor.Next != nil {
+
+			savedCursor.Next.Prev = savedCursor.Prev
 		} else {
-			println("Error: Coordinates can't have the same size and ID. This should not happen!")
-			os.Exit(1)
+			// Om det är tailen
+			d.Textcontent.Tail = savedCursor.Prev
 		}
 
+		d.Textcontent.Length--
+
 	}
-	return len1 > len2
+}
+
+func NewDocument() Document {
+
+	var location CoordT = CoordT{
+		Coordinate: []int{0},
+		ID:         0,
+	}
+
+	// BOD = Beginning Of File
+	BOF := Item{
+		Letter:   "",
+		Location: location,
+		ID:       0,
+		Next:     nil,
+		Prev:     nil,
+	}
+
+	textContent := LinkedList{
+		Head:   &BOF,
+		Tail:   &BOF,
+		Length: 0,
+	}
+
+	d := Document{
+		Textcontent:    textContent,
+		CursorPosition: &BOF,
+	}
+
+	return d
+}
+
+func (d*Document) CordReset() {
+	length := d.Textcontent.Length
+	if length < 1{
+		return
+	}
+
+	current := d.Textcontent.Head.Next
+	for i := 1; i <= length; i++{
+		current.Location.Coordinate = []int{i}
+		current = current.Next
+	}
 }

@@ -12,7 +12,7 @@
     let { compileLatex } = $props();
     let socket: WebSocket;
 
-    let broadcastUpdate = $state(false);
+    let updateFromCode = $state(false);
 
     let editor: HTMLElement;
     let editorView: EditorView;
@@ -25,7 +25,39 @@
     }
     
     type Message = {
+        document: string
         changes: Change[]
+    }
+
+    type UpdatedDocMessage = {
+        document: string
+        cursorIndex: number
+    }
+
+    async function applyUpdate(message: Message) {
+        updateFromCode = true;
+        const serverUrl = `http://${location.hostname}:8080`;
+        // When using wasm, this should call a crdt function directly instead
+        // of making a request to the server
+        await fetch(`${serverUrl}/updateDocument`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(message),
+        })
+            .then(res => res.json())
+            .then((updatedDocMessage: UpdatedDocMessage) => {
+                editorView.dispatch({
+                    changes: {
+                        from: 0,
+                        to: editorView.state.doc.length,
+                        insert: updatedDocMessage.document,
+                    },
+                    selection: {
+                        anchor: updatedDocMessage.cursorIndex + 1,
+                    },
+                });
+            });
+        updateFromCode = false;
     }
 
     function sendChangesToCrdt(tr: Transaction): void {
@@ -39,14 +71,17 @@
             });
 
             const message: Message = {
+                document: editorView.state.doc.toString(),
                 changes: changes
             };
             console.log("Sending message:", message);
+
+            applyUpdate(message)
             socket.send(JSON.stringify(message));
     }
 
     const BlockLocalChanges = EditorState.transactionFilter.of(tr => {
-        if (tr.docChanged && !broadcastUpdate) {
+        if (tr.docChanged && !updateFromCode) {
             sendChangesToCrdt(tr);
             return []; // Blocka ändringar lokalt genom att skicka tillbaka inga
         }
@@ -73,22 +108,9 @@
         socket = new WebSocket(`${serverUrl}/editDocWebsocket`);
 
         socket.addEventListener("message", (event) => {
-            const res: Message = JSON.parse(event.data);
-            console.log(res);
-            broadcastUpdate = true;
-            res.changes.forEach((change) => {
-                editorView.dispatch({
-                    changes: {
-                        from: change.from,
-                        to: change.to,
-                        insert: change.text,
-                    },
-                    selection: {
-                        anchor: change.to + 1,
-                    },
-                });
-            });
-            broadcastUpdate = false;
+            const message: Message = JSON.parse(event.data);
+            console.log(message);
+            applyUpdate(message)
         });
 
         fetch(`${serverUrl}/document`)
