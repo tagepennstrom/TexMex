@@ -1,7 +1,8 @@
 // src/lib/index.ts
 import { get } from 'svelte/store';
-import { editorView } from '$lib/stores';
-import Editor from '../routes/Editor.svelte';
+import { editorView, compileLatexStore } from "$lib/stores";
+
+
 
 export function insertBold() {
     const view = get(editorView);
@@ -61,7 +62,19 @@ export function insertUnderline(){
     dispatch({
         selection: { anchor: cursor + 11, head: cursor + 11 }
     });
-
 }
+
+
+export function compile() {
+    const view = get(editorView);
+    const compileLatex = get(compileLatexStore);
+
+    if (view && compileLatex) {
+        const content = view.state.doc.toString();
+        compileLatex(content);
+    }
+ }
+
+
 
 

@@ -34,6 +34,8 @@
     <button class="Bold" onclick={insertBold} title ="Bold"><strong>B</strong></button>
     <button class="Italic" onclick={insertItalic} title="Italic"><em>I</em></button>
     <button class="Underline" onclick={insertUnderline} title="Underline"><u>U</u></button>
+    <button class="Compile" onclick={compile}>Compile</button>
+
 </div>
 
 <style>
@@ -83,6 +85,18 @@
     }
 
     .Underline:hover{
+        background-color: orange;
+    }
+
+    .Compile {
+        padding: 10px 20px;
+        background-color: rgb(246, 137, 4);
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    .Compile:hover{
         background-color: orange;
     }
 

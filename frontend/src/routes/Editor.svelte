@@ -6,7 +6,7 @@
     import { StreamLanguage } from "@codemirror/language";
     import { stex } from "@codemirror/legacy-modes/mode/stex";
     import { get } from "svelte/store";
-    import { editorView as editorViewStore } from "$lib/stores";
+    import { compileLatexStore, editorView as editorViewStore } from "$lib/stores";
 
     let { compileLatex } = $props();
     const serverUrl = "http://localhost:8080";
@@ -68,19 +68,16 @@
                     parent: editor
                 });
 
-                // 👇 Spara editorn i store för delning med Toolbar
+                // Spara editorn i store för delning med Toolbar
                 editorViewStore.set(editorView);
+                compileLatexStore.set(compileLatex);
             });
     });
 
-    function compileContent() {
-        const content = editorView.state.doc.toString();
-        compileLatex(content);
-    }
 </script>
 
 <!-- UI -->
-<button on:click={compileContent}>Compile</button>
+
 <div id="editor" bind:this={editor}></div>
 
 <style>
@@ -91,17 +88,4 @@
         margin: auto;
     }
 
-    button {
-        padding: 10px 20px;
-        background-color: darkorange;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        align-items: flex-start;
-    }
-
-    button:hover {
-        background-color: orange;
-    }
 </style>
