@@ -1,7 +1,6 @@
-package crdt3
+package crdt
 
 import (
-	"fmt"
 	"os"
 )
 
@@ -30,7 +29,7 @@ func NewDocument() Document {
 		ID:         0,
 	}
 
-	// BOD = Beginning Of File
+	// BOF = Beginning Of File
 	BOF := Item{
 		Char:   0,
 		Location: location,
@@ -47,7 +46,7 @@ func NewDocument() Document {
 
 func DocumentFromStr(str string) Document {
 	doc := NewDocument()
-	for i := 0; i < len(str); i++ {
+	for i := range len(str) {
 		doc.Insert(str[i], i, 0)
 	}
 	return doc
@@ -55,6 +54,11 @@ func DocumentFromStr(str string) Document {
 
 func (doc *Document) ToString() string {
 	str := ""
+	item := doc.Head.Next
+	for item != nil {
+		str += string(item.Char)
+		item = item.Next
+	}
 	return str
 }
 
@@ -111,7 +115,7 @@ func (d *Document) indexToItem(index int) (Item, bool) {
 	} else {
 
 		current := d.Head
-		for i := 0; i < index; i++ {
+		for range index {
 			current = current.Next
 		}
 
@@ -261,7 +265,6 @@ func compareIndexes(c1 CoordT, c2 CoordT) bool {
 		} else if c2.ID < c1.ID {
 			return false
 		} else {
-			fmt.Errorf("Coordinates are identical")
 			println("Error: Coordinates can't have the same size and ID. This should not happen!")
 			os.Exit(1)
 		}

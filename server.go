@@ -11,7 +11,7 @@ import (
 	"os/exec"
 	"slices"
 
-	"websocket-server/crdt3"
+	"websocket-server/crdt"
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
@@ -31,10 +31,10 @@ type EditDocMessage struct {
 
 const filename = "document"
 
-var document = crdt3.DocumentFromStr(`\documentclass{article}
-	\begin{document}
+var document = crdt.DocumentFromStr(`\documentclass{article}
+\begin{document}
 	abcd
-	\end{document}`)
+\end{document}`)
 
 var connections []*websocket.Conn
 
