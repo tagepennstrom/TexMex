@@ -10,7 +10,8 @@
     let compileCount = $state(0);
 
     async function compileLatex(content: string) {
-        const res = await fetch("http://localhost:8080/compileDocument", {
+        const serverUrl = `http://${location.hostname}:8080`;
+        const res = await fetch(`${serverUrl}/compileDocument`, {
             method: "POST",
             headers: { "Content-Type": "text/plain" },
             body: content
@@ -22,7 +23,7 @@
         }
 
         const data = await res.json();
-        pdfUrl = `http://localhost:8080${data.pdfUrl}`;
+        pdfUrl = serverUrl + data.pdfUrl;
         compileCount++;
     }
 </script>
@@ -53,9 +54,6 @@
         flex: 1;
     }
 
-    .compile-button {
-        float: top;
-    }
     
 
 </style>

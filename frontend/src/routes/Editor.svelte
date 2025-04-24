@@ -11,21 +11,42 @@
 
 
     let { compileLatex } = $props();
-    const serverUrl = "http://localhost:8080";
-
     let socket: WebSocket;
-    let broadcastUpdate = false;
+
+    let broadcastUpdate = $state(false);
+
     let editor: HTMLElement;
     let editorView: EditorView;
 
+    
+    type Change = {
+        from: number;   // Start index
+        to: number;     // Slut index
+        text: string;   // Tillagd text, tom vid borttagning
+    }
+    
+    type Message = {
+        changes: Change[]
+    }
+
     function onUpdate(update: ViewUpdate) {
         if (!update.docChanged || broadcastUpdate) return;
-
-        const message = {
-            document: editorView.state.doc.toString(),
+        
+        //Skickar bara det som ändras
+        const changes: Change[] = [];
+        update.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
+            changes.push({
+                from: fromA, 
+                to: toA,     
+                text: inserted.toString() // Tillagd text, tom vid borttagning
+            });
+        });
+        
+        const message: Message = {
+            changes: changes
         };
+        console.log("Sending message:", message);
         socket.send(JSON.stringify(message));
-        broadcastUpdate = false;
     }
 
     const fixedHeightEditor = EditorView.theme({
@@ -42,22 +63,23 @@
     ];
 
     onMount(() => {
+        const serverUrl = `http://${location.hostname}:8080`;
         socket = new WebSocket(`${serverUrl}/editDocWebsocket`);
 
         socket.addEventListener("message", (event) => {
-            const res = JSON.parse(event.data);
+            const res: Message = JSON.parse(event.data);
+            console.log(res);
             broadcastUpdate = true;
-
-            const view = get(editorViewStore);
-            if (view) {
-                view.dispatch({
+            res.changes.forEach((change) => {
+                editorView.dispatch({
                     changes: {
-                        from: 0,
-                        to: view.state.doc.length,
-                        insert: res.document
+                        from: change.from,
+                        to: change.to,
+                        insert: change.text,
                     }
                 });
-            }
+            });
+            broadcastUpdate = false;
         });
 
         fetch(`${serverUrl}/document`)
