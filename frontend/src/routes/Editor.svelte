@@ -8,6 +8,8 @@
     import { get } from "svelte/store";
     import { editorView as editorViewStore , compileLatexStore} from "$lib/stores";
 
+
+
     let { compileLatex } = $props();
     const serverUrl = "http://localhost:8080";
 
@@ -35,7 +37,8 @@
         basicSetup,
         StreamLanguage.define(stex),
         EditorView.updateListener.of(onUpdate),
-        fixedHeightEditor
+        fixedHeightEditor,
+        EditorView.lineWrapping
     ];
 
     onMount(() => {
@@ -87,5 +90,6 @@
         width: 49%;
         float: left;
         margin: auto;
+        word-wrap: break-word
     }
     </style>
