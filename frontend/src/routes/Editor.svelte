@@ -81,7 +81,10 @@
                         from: change.from,
                         to: change.to,
                         insert: change.text,
-                    }
+                    },
+                    selection: {
+                        anchor: change.to + 1,
+                    },
                 });
             });
             broadcastUpdate = false;
