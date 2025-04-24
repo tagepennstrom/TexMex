@@ -1,18 +1,40 @@
 <script lang="ts">
     import { insertBold, insertItalic, insertUnderline } from '$lib/index';
- 
+    import { onMount, onDestroy } from 'svelte';
 
+    let handleKeydown: (event: KeyboardEvent) => void;
 
+    onMount(() => {
+        handleKeydown = (event: KeyboardEvent) => {
+            if (event.ctrlKey) { 
+                event.preventDefault();
+                switch (event.key) {
+                    case 'b':
+                        insertBold();
+                        break;
+                    case 'i':
+                        insertItalic();
+                        break;
+                    case 'u':
+                        insertUnderline();
+                        break;
+                }
+            }
+        };
 
+        document.addEventListener('keydown', handleKeydown);
+
+        onDestroy(() => {
+            document.removeEventListener('keydown', handleKeydown);
+        });
+    });
 </script>
+
 <div class="Toolbar">
     <button class="Bold" onclick={insertBold} title ="Bold"><strong>B</strong></button>
     <button class="Italic" onclick={insertItalic} title="Italic"><em>I</em></button>
     <button class="Underline" onclick={insertUnderline} title="Underline"><u>U</u></button>
 </div>
-
-
-
 
 <style>
 
