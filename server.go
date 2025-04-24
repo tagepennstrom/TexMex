@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -14,11 +15,16 @@ import (
 	"github.com/coder/websocket/wsjson"
 )
 
-const frontendHost = "localhost:5173"
-const serverAddress = "localhost:8080"
+const frontendPort = "5173"
+
+type Change struct {
+	From int    `json:"from"` // Start index
+	To   int    `json:"to"`   // Slut index
+	Text string `json:"text"` // Tillagd text
+}
 
 type EditDocMessage struct {
-	Document string `json:"document"`
+	Changes  []Change `json:"changes"`
 }
 
 const filename = "document"
@@ -28,6 +34,17 @@ var document = `\documentclass{article}
 abcd
 \end{document}`
 var connections []*websocket.Conn
+
+func getLocalIP() (string, error) {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		return "", err
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	return localAddr.IP.String(), nil
+}
 
 func getDocument(w http.ResponseWriter, r *http.Request) {
 	_, err := w.Write([]byte(document))
@@ -42,7 +59,7 @@ func broadcastMessage(ctx context.Context, message EditDocMessage, sender *webso
 	log.Printf("Broadcasting to %d clients\n", len(connections))
 	log.Printf("Broadcasting message: %v\n", message)
 	for _, c := range connections {
-		if (c == sender) {
+		if c == sender {
 			continue
 		}
 		err := wsjson.Write(ctx, c, message)
@@ -61,7 +78,15 @@ func removeConn(connToDelete *websocket.Conn) []*websocket.Conn {
 	return connections
 }
 
+func updateDocument(changes []Change) {
+	for _, change := range changes {
+		document = document[:change.From] + change.Text + document[change.To:]
+	}
+}
+
 func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
+	ip, _ := getLocalIP()
+	frontendHost := fmt.Sprintf("%s:%s", ip, "5173")
 	opts := websocket.AcceptOptions{
 		OriginPatterns: []string{frontendHost},
 	}
@@ -83,8 +108,8 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		log.Printf("Received: %v\n", editDocMessage)
-		document = editDocMessage.Document
+		log.Printf("Changes made: %v\n", editDocMessage)
+		updateDocument(editDocMessage.Changes)
 		broadcastMessage(ctx, editDocMessage, c)
 	}
 }
@@ -129,7 +154,8 @@ func servePdf(w http.ResponseWriter, r *http.Request) {
 }
 
 func middleware(handlerFunc http.HandlerFunc) http.HandlerFunc {
-	frontendUrl := fmt.Sprintf("http://%s", frontendHost)
+	ip, _ := getLocalIP()
+	frontendUrl := fmt.Sprintf("http://%s:%s", ip, frontendPort)
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Access-Control-Allow-Origin", frontendUrl)
 		log.Printf("%s %s\n", r.Method, r.RequestURI)
@@ -138,6 +164,9 @@ func middleware(handlerFunc http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
+	const port = "8080"
+	ip, _ := getLocalIP()
+	serverAddress := fmt.Sprintf("%s:%s", ip, port)
 	log.Printf("Server running on %s\n", serverAddress)
 
 	http.HandleFunc("/document", middleware(getDocument))
