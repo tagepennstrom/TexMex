@@ -1,10 +1,13 @@
-<script lang='ts'>
-    import {basicSetup, EditorView} from "codemirror"
-    import {onMount} from 'svelte'
-    import {EditorState} from "@codemirror/state"
-    import {ViewUpdate} from "@codemirror/view"
-    import {StreamLanguage,} from '@codemirror/language'
-    import { stex } from "@codemirror/legacy-modes/mode/stex"
+<script lang="ts">
+    import { basicSetup, EditorView } from "codemirror";
+    import { onMount } from "svelte";
+    import { EditorState } from "@codemirror/state";
+    import { ViewUpdate } from "@codemirror/view";
+    import { StreamLanguage } from "@codemirror/language";
+    import { stex } from "@codemirror/legacy-modes/mode/stex";
+    import { get } from "svelte/store";
+    import { editorView as editorViewStore , compileLatexStore} from "$lib/stores";
+
 
 
     let { compileLatex } = $props();
@@ -46,19 +49,18 @@
         socket.send(JSON.stringify(message));
     }
 
-    
     const fixedHeightEditor = EditorView.theme({
-        "&": {height: "700px"},
-        ".cm-scroller": {overflow: "auto"}
-    })
+        "&": { height: "700px" },
+        ".cm-scroller": { overflow: "auto" }
+    });
 
     const extensions = [
         basicSetup,
         StreamLanguage.define(stex),
         EditorView.updateListener.of(onUpdate),
-        fixedHeightEditor
-    ]
-
+        fixedHeightEditor,
+        EditorView.lineWrapping
+    ];
 
     onMount(() => {
         const serverUrl = `http://${location.hostname}:8080`;
@@ -83,7 +85,6 @@
         fetch(`${serverUrl}/document`)
             .then(res => res.text())
             .then(text => {
-                // Initialize CodeMirror editor
                 editorView = new EditorView({
                     state: EditorState.create({
                         doc: text,
@@ -91,18 +92,18 @@
                     }),
                     parent: editor
                 });
+
+                // 👇 Spara editorn i store för delning med Toolbar
+                editorViewStore.set(editorView);
+                compileLatexStore.set(compileLatex);
             });
     });
 
 
-    function compileContent() {
-        const content = editorView.state.doc.toString(); // Get the current content from CodeMirror
-        compileLatex(content);
-    }
 </script>
 
+<!-- UI -->
 
-<button onclick={() => compileContent()}>Compile</button>
 <div id="editor" bind:this={editor}></div>
 
 <style>
@@ -111,19 +112,6 @@
         width: 49%;
         float: left;
         margin: auto;
+        word-wrap: break-word
     }
-
-    button {
-        padding: 10px 20px;
-        background-color: darkorange;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        align-items:flex-start;
-    }
-
-    button:hover {
-        background-color: orange;
-    }
-</style>
+    </style>
