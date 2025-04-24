@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"slices"
 
+	"websocket-server/crdt3"
+
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 )
@@ -29,10 +31,11 @@ type EditDocMessage struct {
 
 const filename = "document"
 
-var document = `\documentclass{article}
-\begin{document}
-abcd
-\end{document}`
+var document = crdt3.DocumentFromStr(`\documentclass{article}
+	\begin{document}
+	abcd
+	\end{document}`)
+
 var connections []*websocket.Conn
 
 func getLocalIP() (string, error) {
@@ -47,7 +50,7 @@ func getLocalIP() (string, error) {
 }
 
 func getDocument(w http.ResponseWriter, r *http.Request) {
-	_, err := w.Write([]byte(document))
+	_, err := w.Write([]byte(document.ToString()))
 	if err != nil {
 		errorMessage := fmt.Sprintf("Failed to write document: %s", err)
 		log.Println(errorMessage)
@@ -80,7 +83,10 @@ func removeConn(connToDelete *websocket.Conn) []*websocket.Conn {
 
 func updateDocument(changes []Change) {
 	for _, change := range changes {
-		document = document[:change.From] + change.Text + document[change.To:]
+		uID := 0
+		for i := change.From; i < change.To; i++ {
+			document.Insert(change.Text[i - change.From], i, uID)
+		}
 	}
 }
 
