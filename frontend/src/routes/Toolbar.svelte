@@ -102,6 +102,7 @@
         border-radius: 5px;
         cursor: pointer;
     }
+    
     .Compile:hover{
         background-color: orange;
     }

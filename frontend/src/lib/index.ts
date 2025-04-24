@@ -91,6 +91,8 @@ export function compile() {
 
     if (view && compileLatex) {
         let content = view.state.doc.toString();
+
+        
         compileLatex(content);
     }
  }
