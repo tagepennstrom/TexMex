@@ -36,7 +36,6 @@
         <div class="toolbar">
             <Toolbar/>
         </div>
-        <!-- <button class="compile-button" onclick={compileLatex(content)}>Compile</button> -->
         <Editor {compileLatex} />
         <Viewer {pdfUrl} {compileCount}/>
     </div>
@@ -53,8 +52,5 @@
     .content {
         flex: 1;
     }
-
-    
-
 </style>
 

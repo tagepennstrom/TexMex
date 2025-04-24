@@ -4,6 +4,7 @@
     import {EditorState, Transaction} from "@codemirror/state"
     import {StreamLanguage,} from '@codemirror/language'
     import { stex } from "@codemirror/legacy-modes/mode/stex"
+    import { editorView as editorViewStore , compileLatexStore} from "$lib/stores";
 
 
 
@@ -62,7 +63,8 @@
         basicSetup,
         StreamLanguage.define(stex),
         fixedHeightEditor,
-        BlockLocalChanges
+        BlockLocalChanges,
+        EditorView.lineWrapping
     ]
 
 
@@ -100,18 +102,14 @@
                     }),
                     parent: editor
                 });
+
+                // Spara editorn i store för delning med Toolbar
+                editorViewStore.set(editorView);
+                compileLatexStore.set(compileLatex);
             });
     });
-
-
-    function compileContent() {
-        const content = editorView.state.doc.toString(); // Get the current content from CodeMirror
-        compileLatex(content);
-    }
 </script>
 
-
-<button onclick={() => compileContent()}>Compile</button>
 <div id="editor" bind:this={editor}></div>
 
 <style>
@@ -122,17 +120,4 @@
         margin: auto;
     }
 
-    button {
-        padding: 10px 20px;
-        background-color: darkorange;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        align-items:flex-start;
-    }
-
-    button:hover {
-        background-color: orange;
-    }
 </style>
