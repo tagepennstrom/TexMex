@@ -24,7 +24,6 @@ type Change struct {
 }
 
 type EditDocMessage struct {
-	Document string   `json:"document"`
 	Changes  []Change `json:"changes"`
 }
 
@@ -79,6 +78,12 @@ func removeConn(connToDelete *websocket.Conn) []*websocket.Conn {
 	return connections
 }
 
+func updateDocument(changes []Change) {
+	for _, change := range changes {
+		document = document[:change.From] + change.Text + document[change.To:]
+	}
+}
+
 func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	ip, _ := getLocalIP()
 	frontendHost := fmt.Sprintf("%s:%s", ip, "5173")
@@ -103,9 +108,8 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		log.Printf("Received: %v\n", editDocMessage)
-		log.Printf("Changes made: %v\n", editDocMessage.Changes)
-		document = editDocMessage.Document
+		log.Printf("Changes made: %v\n", editDocMessage)
+		updateDocument(editDocMessage.Changes)
 		broadcastMessage(ctx, editDocMessage, c)
 	}
 }

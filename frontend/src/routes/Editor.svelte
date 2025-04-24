@@ -23,8 +23,7 @@
     }
     
     type Message = {
-        document: string;
-        changes: Change
+        changes: Change[]
     }
 
     function onUpdate(update: ViewUpdate) {
@@ -40,13 +39,10 @@
             });
         });
         
-        // Skickar hela dokumentet
-        const message = {
-            document: editorView.state.doc.toString(),
+        const message: Message = {
             changes: changes
         };
         console.log("Sending message:", message);
-        console.log("Changes:", message.changes);
         socket.send(JSON.stringify(message));
     }
 
@@ -69,15 +65,17 @@
         socket = new WebSocket(`${serverUrl}/editDocWebsocket`);
 
         socket.addEventListener("message", (event) => {
-            const res = JSON.parse(event.data);
-            console.log(event);
+            const res: Message = JSON.parse(event.data);
+            console.log(res);
             broadcastUpdate = true;
-            editorView.dispatch({
-                changes: {
-                    from: 0,
-                    to: editorView.state.doc.length,
-                    insert: res.document,
-                }
+            res.changes.forEach((change) => {
+                editorView.dispatch({
+                    changes: {
+                        from: change.from,
+                        to: change.to,
+                        insert: change.text,
+                    }
+                });
             });
             broadcastUpdate = false;
         });
