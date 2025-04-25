@@ -233,7 +233,6 @@ func Insertion(letter string, coordinate CoordT, db LinkedList, uID int) LinkedL
 	nextItem.Prev = &newItem
 	newItem.Next = nextItem
 
-
 	return db
 }
 
@@ -431,15 +430,25 @@ func NewDocument() Document {
 	return d
 }
 
-func (d*Document) CordReset() {
+func (d *Document) CordReset() {
 	length := d.Textcontent.Length
-	if length < 1{
+	if length < 1 {
 		return
 	}
 
 	current := d.Textcontent.Head.Next
-	for i := 1; i <= length; i++{
+	for i := 1; i <= length; i++ {
 		current.Location.Coordinate = []int{i}
 		current = current.Next
 	}
+}
+
+func (d *Document) PrintDoc() {
+	var result string
+	for current := d.Textcontent.Head; current != nil; current = current.Next {
+		result += current.Letter
+
+	}
+	println("Result:", result)
+
 }

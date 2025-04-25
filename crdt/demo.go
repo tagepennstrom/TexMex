@@ -2,6 +2,7 @@
 
 package crdt
 
+/*
 import (
 	"fmt"
 	"log"
@@ -35,7 +36,7 @@ func liveUserDemo(d *Document) {
 	word := arr[wordIndexChosen]
 	wordLen := len(word)
 
-	pos := rand.Int() % d.Textcontent.Length 
+	pos := rand.Int() % d.Textcontent.Length
 
 	r2 := rand.New(rand.NewSource(time.Now().UnixNano()))
 
@@ -86,7 +87,7 @@ func processInput() {
 				doc.MoveCursor(0)
 				fmt.Print("\033[H\033[2J")
 				doc.DisplayWithCursor()
-		
+
 		} else if char == '3' {
 			doc.CordReset()
 
@@ -144,3 +145,4 @@ func (d *Document) deleteAction() {
 	d.DisplayWithCursor()
 
 }
+*/
