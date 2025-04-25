@@ -81,9 +81,15 @@ func updateDocument(w http.ResponseWriter, r *http.Request) {
 	document.SetCursorAt(editDocMessage.CursorIndex)
 	for _, change := range editDocMessage.Changes {
 		// TODO: give each user an ID
-		uID := 0
-		for i := change.From; i <= change.To; i++ {
-			document.LoadInsert(string(change.Text[i - change.From]), change.From, uID)
+		uID := 1
+		if change.Text == "" {
+			for i := change.To; i > change.From; i-- {
+				document.DeleteAtIndex(i)
+			}
+		} else {
+			for i := change.From; i <= change.To; i++ {
+				document.LoadInsert(string(change.Text[i - change.From]), change.From, uID)
+			}
 		}
 	}
 
@@ -97,7 +103,6 @@ func updateDocument(w http.ResponseWriter, r *http.Request) {
 
 func broadcastMessage(ctx context.Context, message EditDocMessage, sender *websocket.Conn) {
 	log.Printf("Broadcasting to %d clients\n", len(connections))
-	log.Printf("Broadcasting message: %v\n", message)
 	for _, c := range connections {
 		if c == sender {
 			continue
@@ -142,7 +147,7 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		log.Printf("Changes made: %v\n", editDocMessage)
+		log.Printf("Changes made: %v\n", editDocMessage.Changes)
 		broadcastMessage(ctx, editDocMessage, c)
 	}
 }

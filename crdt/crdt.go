@@ -32,7 +32,7 @@ type CoordT struct {
 func DocumentFromStr(str string) Document {
 	doc := NewDocument()
 	for i := range len(str) {
-		doc.Insert(string(str[i]), 0)
+		doc.Insert(string(str[i]), 1)
 	}
 	return doc
 }
@@ -364,6 +364,17 @@ func (d *Document) MoveCursor(index int) {
 		}
 		newPosition = *current
 		d.CursorPosition = &newPosition
+	}
+}
+
+func (d *Document) DeleteAtIndex(index int) {
+	cursorIndex := d.CursorIndex()
+	d.SetCursorAt(index - 1)
+	d.Delete()
+	if cursorIndex == index {
+		d.SetCursorAt(cursorIndex - 1)
+	} else {
+		d.SetCursorAt(cursorIndex)
 	}
 }
 
