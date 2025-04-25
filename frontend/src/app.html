@@ -2,6 +2,15 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
+
+		<script src="/wasm/wasm_exec.js"></script>
+		<script>
+			const go = new Go();
+			WebAssembly.instantiateStreaming(fetch("/wasm/main.wasm"), go.importObject).then((result) => {
+				go.run(result.instance);
+			});
+		</script>
+
 		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		%sveltekit.head%
