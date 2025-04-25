@@ -27,14 +27,14 @@ type Change struct {
 }
 
 type EditDocMessage struct {
-	Document string `json:"document"`
-	Changes  []Change `json:"changes"`
-	CursorIndex int `json:"cursorIndex"`
+	Document    string   `json:"document"`
+	Changes     []Change `json:"changes"`
+	CursorIndex int      `json:"cursorIndex"`
 }
 
 type UpdatedDocMessage struct {
-	Document string `json:"document"`
-	CursorIndex int `json:"cursorIndex"`
+	Document    string `json:"document"`
+	CursorIndex int    `json:"cursorIndex"`
 }
 
 const filename = "document"
@@ -87,14 +87,14 @@ func updateDocument(w http.ResponseWriter, r *http.Request) {
 				document.DeleteAtIndex(i)
 			}
 		} else {
-			for i := change.From; i <= change.To; i++ {
-				document.LoadInsert(string(change.Text[i - change.From]), change.From, uID)
+			for i, char := range change.Text {
+				document.LoadInsert(string(char), change.From+i, uID)
 			}
 		}
 	}
 
 	updatedDocMessage := UpdatedDocMessage{
-		Document: document.ToString(),
+		Document:    document.ToString(),
 		CursorIndex: document.CursorIndex(),
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -199,7 +199,7 @@ func middleware(handlerFunc http.HandlerFunc) http.HandlerFunc {
 		w.Header().Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		w.Header().Add("Access-Control-Allow-Headers", "Content-Type")
 		log.Printf("%s %s\n", r.Method, r.RequestURI)
-  	if r.Method == "OPTIONS" {
+		if r.Method == "OPTIONS" {
 			return
 		}
 		handlerFunc(w, r)

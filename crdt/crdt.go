@@ -115,7 +115,7 @@ func CompareIndexes(c1 CoordT, c2 CoordT) bool {
 			return false
 		} else {
 			fmt.Errorf("Coordinates are identical")
-			println("Error: Coordinates can't have the same size and ID. This should not happen!")
+			println("Error: Coordinates can't have the same size and ID. This should not happen!") // Har fått det felet
 			os.Exit(1)
 		}
 
