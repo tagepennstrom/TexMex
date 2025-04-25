@@ -27,6 +27,7 @@
     type Message = {
         document: string
         changes: Change[]
+        cursorIndex: number
     }
 
     type UpdatedDocMessage = {
@@ -34,11 +35,16 @@
         cursorIndex: number
     }
 
-    async function applyUpdate(message: Message) {
+    async function applyUpdate(document: string, changes: Change[]) {
         updateFromCode = true;
         const serverUrl = `http://${location.hostname}:8080`;
         // When using wasm, this should call a crdt function directly instead
         // of making a request to the server
+        const message = {
+            document: document,
+            changes: changes,
+            cursorIndex: editorView.state.selection.main.anchor,
+        };
         await fetch(`${serverUrl}/updateDocument`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -53,7 +59,7 @@
                         insert: updatedDocMessage.document,
                     },
                     selection: {
-                        anchor: updatedDocMessage.cursorIndex + 1,
+                        anchor: updatedDocMessage.cursorIndex,
                     },
                 });
             });
@@ -61,6 +67,7 @@
     }
 
     function sendChangesToCrdt(tr: Transaction): void {
+        const cursorIndex = editorView.state.selection.main.anchor;
         const changes: Change[] = [];
             tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
                 changes.push({
@@ -72,11 +79,12 @@
 
             const message: Message = {
                 document: editorView.state.doc.toString(),
-                changes: changes
+                changes: changes,
+                cursorIndex: cursorIndex,
             };
             console.log("Sending message:", message);
 
-            applyUpdate(message)
+            applyUpdate(editorView.state.doc.toString(), changes)
             socket.send(JSON.stringify(message));
     }
 
@@ -110,7 +118,7 @@
         socket.addEventListener("message", (event) => {
             const message: Message = JSON.parse(event.data);
             console.log(message);
-            applyUpdate(message)
+            applyUpdate(editorView.state.doc.toString(), message.changes)
         });
 
         fetch(`${serverUrl}/document`)

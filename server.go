@@ -29,6 +29,7 @@ type Change struct {
 type EditDocMessage struct {
 	Document string `json:"document"`
 	Changes  []Change `json:"changes"`
+	CursorIndex int `json:"cursorIndex"`
 }
 
 type UpdatedDocMessage struct {
@@ -76,20 +77,19 @@ func updateDocument(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errorMessage, http.StatusBadRequest)
 		return
 	}
-	doc := crdt.DocumentFromStr(editDocMessage.Document)
-	for i, change := range editDocMessage.Changes {
-		if i == 0 {
-			doc.SetCursorAt(change.From - 1)
-		}
+	document = crdt.DocumentFromStr(editDocMessage.Document)
+	document.SetCursorAt(editDocMessage.CursorIndex)
+	for _, change := range editDocMessage.Changes {
+		// TODO: give each user an ID
 		uID := 0
 		for i := change.From; i <= change.To; i++ {
-			doc.Insert(string(change.Text[i - change.From]), uID)
+			document.LoadInsert(string(change.Text[i - change.From]), change.From, uID)
 		}
 	}
 
 	updatedDocMessage := UpdatedDocMessage{
-		Document: doc.ToString(),
-		CursorIndex: doc.CursorIndex(),
+		Document: document.ToString(),
+		CursorIndex: document.CursorIndex(),
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(updatedDocMessage)
@@ -99,9 +99,9 @@ func broadcastMessage(ctx context.Context, message EditDocMessage, sender *webso
 	log.Printf("Broadcasting to %d clients\n", len(connections))
 	log.Printf("Broadcasting message: %v\n", message)
 	for _, c := range connections {
-		/* if c == sender {
+		if c == sender {
 			continue
-		} */
+		}
 		err := wsjson.Write(ctx, c, message)
 		if err != nil {
 			log.Printf("Failed to write websocket message: %s", err)

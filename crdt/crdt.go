@@ -266,31 +266,25 @@ func GetAppendCoordinate(prevCoord []int, uID int) CoordT {
 	return newLocation
 }
 
-func (d *Document) Insert(letter string, uID int) {
-
+func (d *Document) findInsertCoord(uID int) CoordT {
 	cursorPosCoordinate := d.CursorPosition.Location // TODO REWRITE, det här är oläsbart
-
 	// Case 4
 	if d.CursorPosition.Next == nil {
-		location := GetAppendCoordinate(cursorPosCoordinate.Coordinate, uID)
-
-		d.Textcontent = Insertion(letter, location, d.Textcontent, uID)
-		d.CursorForward()
-
-		return
+		return GetAppendCoordinate(cursorPosCoordinate.Coordinate, uID)
 	}
+
 	cursorPosNextCoord := d.CursorPosition.Next.Location
-
 	insertCoord := findIntermediateCoordinate(cursorPosCoordinate, cursorPosNextCoord)
-
-	var location CoordT = CoordT{
+	return CoordT{
 		Coordinate: insertCoord,
 		ID:         uID,
 	}
+}
 
+func (d *Document) Insert(letter string, uID int) {
+	location := d.findInsertCoord(uID)
 	d.Textcontent = Insertion(letter, location, d.Textcontent, uID)
 	d.CursorForward()
-
 }
 
 func (d *Document) CursorForward() {
@@ -339,24 +333,18 @@ func (d *Document) IndexToCoordinate(index int) (Item, bool) {
 }
 
 func (d *Document) LoadInsert(letter string, index int, uID int) {
-
 	prevItem, caseFour := d.IndexToCoordinate(index)
-	var newCoordinate CoordT
-
-	fmt.Println(prevItem.Location.Coordinate)
-
-	// Case 4
+	var location CoordT
 	if caseFour {
-		newCoordinate = GetAppendCoordinate(prevItem.Location.Coordinate, uID)
-	}
+		location = GetAppendCoordinate(prevItem.Location.Coordinate, uID)
+	} else {
+		nextItem := prevItem.Next
+		coord := findIntermediateCoordinate(prevItem.Location, nextItem.Location)
 
-	fmt.Println(newCoordinate)
-	nextItem := prevItem.Next
-	coord := findIntermediateCoordinate(prevItem.Location, nextItem.Location)
-
-	var location CoordT = CoordT{
-		Coordinate: coord,
-		ID:         uID,
+		location = CoordT{
+			Coordinate: coord,
+			ID:         uID,
+		}
 	}
 
 	d.Textcontent = Insertion(letter, location, d.Textcontent, uID)
