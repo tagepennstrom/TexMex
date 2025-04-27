@@ -37,32 +37,22 @@
 
     async function applyUpdate(document: string, changes: Change[]) {
         updateFromCode = true;
-        const serverUrl = `http://${location.hostname}:8080`;
-        // When using wasm, this should call a crdt function directly instead
-        // of making a request to the server
-        const message = {
-            document: document,
-            changes: changes,
-            cursorIndex: editorView.state.selection.main.anchor,
-        };
-        await fetch(`${serverUrl}/updateDocument`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(message),
-        })
-            .then(res => res.json())
-            .then((updatedDocMessage: UpdatedDocMessage) => {
-                editorView.dispatch({
-                    changes: {
-                        from: 0,
-                        to: editorView.state.doc.length,
-                        insert: updatedDocMessage.document,
-                    },
-                    selection: {
-                        anchor: updatedDocMessage.cursorIndex,
-                    },
-                });
-            });
+        const updatedDocMessage = UpdateDocument(
+            document,
+            changes,
+            editorView.state.selection.main.anchor
+        )
+        console.log(updatedDocMessage);
+        editorView.dispatch({
+            changes: {
+                from: 0,
+                to: editorView.state.doc.length,
+                insert: updatedDocMessage.document,
+            },
+            selection: {
+                anchor: updatedDocMessage.cursorIndex,
+            },
+        });
         updateFromCode = false;
     }
 

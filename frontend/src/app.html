@@ -3,10 +3,10 @@
 	<head>
 		<meta charset="utf-8" />
 
-		<script src="/wasm/wasm_exec.js"></script>
+		<script src="/src/wasm/wasm_exec.js"></script>
 		<script>
 			const go = new Go();
-			WebAssembly.instantiateStreaming(fetch("/wasm/main.wasm"), go.importObject).then((result) => {
+			WebAssembly.instantiateStreaming(fetch("/src/wasm/main.wasm"), go.importObject).then((result) => {
 				go.run(result.instance);
 			});
 		</script>
