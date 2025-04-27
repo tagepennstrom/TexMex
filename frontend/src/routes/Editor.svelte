@@ -37,7 +37,7 @@
 
     async function applyUpdate(document: string, changes: Change[]) {
         updateFromCode = true;
-        const updatedDocMessage = UpdateDocument(
+        const updatedDocMessage: UpdatedDocMessage = UpdateDocument(
             document,
             changes,
             editorView.state.selection.main.anchor
@@ -59,31 +59,33 @@
     function sendChangesToCrdt(tr: Transaction): void {
         const cursorIndex = editorView.state.selection.main.anchor;
         const changes: Change[] = [];
-            tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
-                changes.push({
-                    from: fromA, 
-                    to: toA,     
-                    text: inserted.toString() // Tillagd text, tom vid borttagning
-                });
+        tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
+            changes.push({
+                from: fromA, 
+                to: toA,     
+                text: inserted.toString() // Tillagd text, tom vid borttagning
             });
+        });
 
-            const message: Message = {
-                document: editorView.state.doc.toString(),
-                changes: changes,
-                cursorIndex: cursorIndex,
-            };
-            console.log("Sending message:", message);
+        // TODO: gör så att funktionen uppdaterar ett globalt dokument
+        // istället för att returnera ett nytt
+        UpdateDocument(document, changes, editorView.state.selection.main.anchor)
 
-            applyUpdate(editorView.state.doc.toString(), changes)
-            socket.send(JSON.stringify(message));
+        const message: Message = {
+            document: editorView.state.doc.toString(),
+            changes: changes,
+            cursorIndex: cursorIndex,
+        };
+        console.log("Sending message:", message);
+
+        socket.send(JSON.stringify(message));
     }
 
     const BlockLocalChanges = EditorState.transactionFilter.of(tr => {
         if (tr.docChanged && !updateFromCode) {
             sendChangesToCrdt(tr);
-            return []; // Blocka ändringar lokalt genom att skicka tillbaka inga
         }
-        return tr; // Inga ändringar var gjorda men vi måste returna.
+        return tr;
     })
 
     
