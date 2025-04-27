@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -19,24 +18,6 @@ import (
 )
 
 const frontendPort = "5173"
-
-type Change struct {
-	From int    `json:"from"` // Start index
-	To   int    `json:"to"`   // Slut index
-	Text string `json:"text"` // Tillagd text
-}
-
-type EditDocMessage struct {
-	Document    string   `json:"document"`
-	Changes     []Change `json:"changes"`
-	CursorIndex int      `json:"cursorIndex"`
-}
-
-type UpdatedDocMessage struct {
-	Document    string `json:"document"`
-	CursorIndex int    `json:"cursorIndex"`
-}
-
 const filename = "document"
 
 var document = crdt.DocumentFromStr(`\documentclass{article}
@@ -66,42 +47,7 @@ func getDocument(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// This should not be needed when using wasm
-func updateDocument(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-	var editDocMessage EditDocMessage
-	err := decoder.Decode(&editDocMessage)
-	if err != nil {
-		errorMessage := fmt.Sprintf("Failed to update document: %s", err)
-		log.Println(errorMessage)
-		http.Error(w, errorMessage, http.StatusBadRequest)
-		return
-	}
-	document = crdt.DocumentFromStr(editDocMessage.Document)
-	document.SetCursorAt(editDocMessage.CursorIndex)
-	for _, change := range editDocMessage.Changes {
-		// TODO: give each user an ID
-		uID := 1
-		if change.Text == "" {
-			for i := change.To; i > change.From; i-- {
-				document.DeleteAtIndex(i)
-			}
-		} else {
-			for i, char := range change.Text {
-				document.LoadInsert(string(char), change.From+i, uID)
-			}
-		}
-	}
-
-	updatedDocMessage := UpdatedDocMessage{
-		Document:    document.ToString(),
-		CursorIndex: document.CursorIndex(),
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(updatedDocMessage)
-}
-
-func broadcastMessage(ctx context.Context, message EditDocMessage, sender *websocket.Conn) {
+func broadcastMessage(ctx context.Context, message crdt.EditDocMessage, sender *websocket.Conn) {
 	log.Printf("Broadcasting to %d clients\n", len(connections))
 	for _, c := range connections {
 		if c == sender {
@@ -138,7 +84,7 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	connections = append(connections, c)
 
 	ctx := context.Background()
-	var editDocMessage EditDocMessage
+	var editDocMessage crdt.EditDocMessage
 	for {
 		err := wsjson.Read(ctx, c, &editDocMessage)
 		if err != nil {
@@ -213,7 +159,6 @@ func main() {
 	log.Printf("Server running on %s\n", serverAddress)
 
 	http.HandleFunc("/document", middleware(getDocument))
-	http.HandleFunc("/updateDocument", middleware(updateDocument))
 	http.HandleFunc("/editDocWebsocket", editDocWebsocketHandler)
 	http.HandleFunc("/compileDocument", middleware(compileDocument))
 	http.HandleFunc("/pdf", middleware(servePdf))

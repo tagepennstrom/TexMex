@@ -29,6 +29,24 @@ type CoordT struct {
 	ID         int
 }
 
+type Change struct {
+	From int    `json:"from"` // Start index
+	To   int    `json:"to"`   // Slut index
+	Text string `json:"text"` // Tillagd text
+}
+
+type EditDocMessage struct {
+	Document string `json:"document"`
+	Changes  []Change `json:"changes"`
+	CursorIndex int `json:"cursorIndex"`
+}
+
+type UpdatedDocMessage struct {
+	Document string `json:"document"`
+	CursorIndex int `json:"cursorIndex"`
+}
+
+
 func DocumentFromStr(str string) Document {
 	doc := NewDocument()
 	for i := range len(str) {
