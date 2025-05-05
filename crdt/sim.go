@@ -1,4 +1,4 @@
-package main
+package crdt
 
 import (
 	"fmt"
@@ -44,24 +44,24 @@ func (d *Document) Debug(extraInfo bool) {
 	//current := d.Textcontent.Head.Next
 	//prev := d.Textcontent.Head
 	//for i := 0; i < d.Textcontent.Length; i++{
-		//fmt.Print("'"+current.Letter+"' " , "is number: " , i , "In the linked list")
-		//print("\n")
-		//fmt.Print("Is the prev my prev? ", prev.Letter, " ------------->>>> ", current.Prev.Letter)
-		//print("\n")
-		//d.moveCursorAndPrint()		
-		//prev = current
-		//current = current.Next
+	//fmt.Print("'"+current.Letter+"' " , "is number: " , i , "In the linked list")
+	//print("\n")
+	//fmt.Print("Is the prev my prev? ", prev.Letter, " ------------->>>> ", current.Prev.Letter)
+	//print("\n")
+	//d.moveCursorAndPrint()
+	//prev = current
+	//current = current.Next
 	//}
 
 }
 
-func (d *Document) moveCursorAndPrint(){
+func (d *Document) moveCursorAndPrint() {
 	d.MoveCursor(1)
 
 	println("Forward stepping")
 	println("--------------------")
-	for i := 0; i < d.Textcontent.Length; i++{
-		fmt.Print("cursor step", i ," = ")
+	for i := 0; i < d.Textcontent.Length; i++ {
+		fmt.Print("cursor step", i, " = ")
 		fmt.Print(d.CursorPosition.Letter)
 		print("\n")
 		d.CursorForward()
@@ -73,8 +73,8 @@ func (d *Document) moveCursorAndPrint(){
 
 	println("Backward stepping")
 	println("--------------------")
-	for j := 0; j < d.Textcontent.Length; j++{
-		fmt.Print("cursor step", j ," = ")
+	for j := 0; j < d.Textcontent.Length; j++ {
+		fmt.Print("cursor step", j, " = ")
 		fmt.Print(d.CursorPosition.Letter)
 		print("\n")
 		d.CursorBackwards()
@@ -145,22 +145,4 @@ func (d *Document) CleanDocument() {
 	for d.Textcontent.Length > 0 {
 		d.Delete()
 	}
-}
-
-func main() {
-	processInput()
-	//runAllTests() // <- Antons tester (ligger i tests.go)
-
-	//d := NewDocument()
-
-	//d.Insert("a", 1)
-	//d.Insert("a", 1)
-	//d.Insert("a", 1)
-
-	//d.DisplayWithCursor()
-
-	//d.LoadInsert("b", 2, 3)
-
-	//d.DisplayWithCursor()
-
 }

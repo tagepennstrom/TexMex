@@ -1,4 +1,4 @@
-package main
+package crdt
 
 import (
 	"fmt"
@@ -27,6 +27,67 @@ type Item struct {
 type CoordT struct {
 	Coordinate []int
 	ID         int
+}
+
+type Change struct {
+	From int    `json:"from"` // Start index
+	To   int    `json:"to"`   // Slut index
+	Text string `json:"text"` // Tillagd text
+}
+
+type EditDocMessage struct {
+	Document string `json:"document"`
+	Changes  []Change `json:"changes"`
+	CursorIndex int `json:"cursorIndex"`
+}
+
+type UpdatedDocMessage struct {
+	Document string `json:"document"`
+	CursorIndex int `json:"cursorIndex"`
+}
+
+
+func DocumentFromStr(str string) Document {
+	doc := NewDocument()
+	for i := range len(str) {
+		doc.Insert(string(str[i]), 1)
+	}
+	return doc
+}
+
+func (doc *Document) ToString() string {
+	str := ""
+	item := doc.Textcontent.Head.Next
+	for item != nil {
+		str += item.Letter
+		item = item.Next
+	}
+	return str
+}
+
+func (doc *Document) CursorIndex() int {
+	i := 0
+	item := doc.Textcontent.Head.Next
+	for item != nil {
+		if item == doc.CursorPosition {
+			return i
+		}
+		item = item.Next
+		i++
+	}
+	return i
+}
+
+func (doc *Document) SetCursorAt(index int) {
+	i := 0
+	item := doc.Textcontent.Head.Next
+	for item != nil {
+		if i == index {
+			doc.CursorPosition = item
+		}
+		item = item.Next
+		i++
+	}
 }
 
 func (ll *LinkedList) Append(newItem *Item) {
@@ -72,7 +133,7 @@ func CompareIndexes(c1 CoordT, c2 CoordT) bool {
 			return false
 		} else {
 			fmt.Errorf("Coordinates are identical")
-			println("Error: Coordinates can't have the same size and ID. This should not happen!")
+			println("Error: Coordinates can't have the same size and ID. This should not happen!") // Har fått det felet
 			os.Exit(1)
 		}
 
@@ -190,7 +251,6 @@ func Insertion(letter string, coordinate CoordT, db LinkedList, uID int) LinkedL
 	nextItem.Prev = &newItem
 	newItem.Next = nextItem
 
-
 	return db
 }
 
@@ -223,31 +283,25 @@ func GetAppendCoordinate(prevCoord []int, uID int) CoordT {
 	return newLocation
 }
 
-func (d *Document) Insert(letter string, uID int) {
-
+func (d *Document) findInsertCoord(uID int) CoordT {
 	cursorPosCoordinate := d.CursorPosition.Location // TODO REWRITE, det här är oläsbart
-
 	// Case 4
 	if d.CursorPosition.Next == nil {
-		location := GetAppendCoordinate(cursorPosCoordinate.Coordinate, uID)
-
-		d.Textcontent = Insertion(letter, location, d.Textcontent, uID)
-		d.CursorForward()
-
-		return
+		return GetAppendCoordinate(cursorPosCoordinate.Coordinate, uID)
 	}
+
 	cursorPosNextCoord := d.CursorPosition.Next.Location
-
 	insertCoord := findIntermediateCoordinate(cursorPosCoordinate, cursorPosNextCoord)
-
-	var location CoordT = CoordT{
+	return CoordT{
 		Coordinate: insertCoord,
 		ID:         uID,
 	}
+}
 
+func (d *Document) Insert(letter string, uID int) {
+	location := d.findInsertCoord(uID)
 	d.Textcontent = Insertion(letter, location, d.Textcontent, uID)
 	d.CursorForward()
-
 }
 
 func (d *Document) CursorForward() {
@@ -296,24 +350,18 @@ func (d *Document) IndexToCoordinate(index int) (Item, bool) {
 }
 
 func (d *Document) LoadInsert(letter string, index int, uID int) {
-
 	prevItem, caseFour := d.IndexToCoordinate(index)
-	var newCoordinate CoordT
-
-	fmt.Println(prevItem.Location.Coordinate)
-
-	// Case 4
+	var location CoordT
 	if caseFour {
-		newCoordinate = GetAppendCoordinate(prevItem.Location.Coordinate, uID)
-	}
+		location = GetAppendCoordinate(prevItem.Location.Coordinate, uID)
+	} else {
+		nextItem := prevItem.Next
+		coord := findIntermediateCoordinate(prevItem.Location, nextItem.Location)
 
-	fmt.Println(newCoordinate)
-	nextItem := prevItem.Next
-	coord := findIntermediateCoordinate(prevItem.Location, nextItem.Location)
-
-	var location CoordT = CoordT{
-		Coordinate: coord,
-		ID:         uID,
+		location = CoordT{
+			Coordinate: coord,
+			ID:         uID,
+		}
 	}
 
 	d.Textcontent = Insertion(letter, location, d.Textcontent, uID)
@@ -333,6 +381,17 @@ func (d *Document) MoveCursor(index int) {
 		}
 		newPosition = *current
 		d.CursorPosition = &newPosition
+	}
+}
+
+func (d *Document) DeleteAtIndex(index int) {
+	cursorIndex := d.CursorIndex()
+	d.SetCursorAt(index - 1)
+	d.Delete()
+	if cursorIndex == index {
+		d.SetCursorAt(cursorIndex - 1)
+	} else {
+		d.SetCursorAt(cursorIndex)
 	}
 }
 
@@ -389,15 +448,25 @@ func NewDocument() Document {
 	return d
 }
 
-func (d*Document) CordReset() {
+func (d *Document) CordReset() {
 	length := d.Textcontent.Length
-	if length < 1{
+	if length < 1 {
 		return
 	}
 
 	current := d.Textcontent.Head.Next
-	for i := 1; i <= length; i++{
+	for i := 1; i <= length; i++ {
 		current.Location.Coordinate = []int{i}
 		current = current.Next
 	}
+}
+
+func (d *Document) PrintDoc() {
+	var result string
+	for current := d.Textcontent.Head; current != nil; current = current.Next {
+		result += current.Letter
+
+	}
+	println("Result:", result)
+
 }

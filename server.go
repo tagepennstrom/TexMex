@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"slices"
 
+	"websocket-server/crdt"
+
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 )
@@ -33,14 +35,15 @@ type Client struct {
 	id    int
 }
 
-const filename = "document"
 
-var document = `\documentclass{article}
+
+var document = crdt.DocumentFromStr(`\documentclass{article}
 \begin{document}
 abcd
 \end{document}`
 var connections []Client
 var currId int = 0
+
 
 func getLocalIP() (string, error) {
 	conn, err := net.Dial("udp", "12.34.56.78:90")
@@ -54,7 +57,7 @@ func getLocalIP() (string, error) {
 }
 
 func getDocument(w http.ResponseWriter, r *http.Request) {
-	_, err := w.Write([]byte(document))
+	_, err := w.Write([]byte(document.ToString()))
 	if err != nil {
 		errorMessage := fmt.Sprintf("Failed to write document: %s", err)
 		log.Println(errorMessage)
@@ -63,8 +66,8 @@ func getDocument(w http.ResponseWriter, r *http.Request) {
 }
 
 func broadcastMessage(ctx context.Context, message EditDocMessage, sender Client) {
+
 	log.Printf("Broadcasting to %d clients\n", len(connections))
-	log.Printf("Broadcasting message: %v\n", message)
 	for _, c := range connections {
 		if c.id == sender.id {
 			continue
@@ -93,6 +96,7 @@ func updateDocument(changes []Change) {
 }
 
 func acceptConnection(w http.ResponseWriter, r *http.Request) Client {
+
 	ip, _ := getLocalIP()
 	frontendHost := fmt.Sprintf("%s:%s", ip, "5173")
 	opts := websocket.AcceptOptions{
@@ -129,6 +133,7 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 
 	var editDocMessage EditDocMessage
 
+
 	for {
 		err := wsjson.Read(ctx, user.wscon, &editDocMessage)
 		if err != nil {
@@ -140,6 +145,7 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Changes made: %v\n", editDocMessage)
 		updateDocument(editDocMessage.Changes)
 		broadcastMessage(ctx, editDocMessage, user)
+
 	}
 }
 
@@ -188,7 +194,12 @@ func middleware(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	frontendUrl := fmt.Sprintf("http://%s:%s", ip, frontendPort)
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Access-Control-Allow-Origin", frontendUrl)
+		w.Header().Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Add("Access-Control-Allow-Headers", "Content-Type")
 		log.Printf("%s %s\n", r.Method, r.RequestURI)
+		if r.Method == "OPTIONS" {
+			return
+		}
 		handlerFunc(w, r)
 	}
 }

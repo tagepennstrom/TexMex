@@ -1,16 +1,18 @@
 <script lang='ts'>
     import {basicSetup, EditorView} from "codemirror"
     import {onMount} from 'svelte'
-    import {EditorState} from "@codemirror/state"
-    import {ViewUpdate} from "@codemirror/view"
+    import {EditorState, Transaction} from "@codemirror/state"
     import {StreamLanguage,} from '@codemirror/language'
     import { stex } from "@codemirror/legacy-modes/mode/stex"
+    import { editorView as editorViewStore , compileLatexStore} from "$lib/stores";
+
+
 
 
     let { compileLatex } = $props();
     let socket: WebSocket;
 
-    let broadcastUpdate = $state(false);
+    let updateFromCode = $state(false);
 
     let editor: HTMLElement;
     let editorView: EditorView;
@@ -23,28 +25,68 @@
     }
     
     type Message = {
+        document: string
         changes: Change[]
+        cursorIndex: number
     }
 
-    function onUpdate(update: ViewUpdate) {
-        if (!update.docChanged || broadcastUpdate) return;
-        
-        //Skickar bara det som ändras
+    type UpdatedDocMessage = {
+        document: string
+        cursorIndex: number
+    }
+
+    async function applyUpdate(document: string, changes: Change[]) {
+        updateFromCode = true;
+        const updatedDocMessage: UpdatedDocMessage = UpdateDocument(
+            document,
+            changes,
+            editorView.state.selection.main.anchor
+        )
+        console.log(updatedDocMessage);
+        editorView.dispatch({
+            changes: {
+                from: 0,
+                to: editorView.state.doc.length,
+                insert: updatedDocMessage.document,
+            },
+            selection: {
+                anchor: updatedDocMessage.cursorIndex,
+            },
+        });
+        updateFromCode = false;
+    }
+
+    function sendChangesToCrdt(tr: Transaction): void {
+        const cursorIndex = editorView.state.selection.main.anchor;
         const changes: Change[] = [];
-        update.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
+        tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
             changes.push({
                 from: fromA, 
                 to: toA,     
                 text: inserted.toString() // Tillagd text, tom vid borttagning
             });
         });
-        
+
+        // TODO: gör så att funktionen uppdaterar ett globalt dokument
+        // istället för att returnera ett nytt
+        UpdateDocument(document, changes, editorView.state.selection.main.anchor)
+
         const message: Message = {
-            changes: changes
+            document: editorView.state.doc.toString(),
+            changes: changes,
+            cursorIndex: cursorIndex,
         };
         console.log("Sending message:", message);
+
         socket.send(JSON.stringify(message));
     }
+
+    const BlockLocalChanges = EditorState.transactionFilter.of(tr => {
+        if (tr.docChanged && !updateFromCode) {
+            sendChangesToCrdt(tr);
+        }
+        return tr;
+    })
 
     
     const fixedHeightEditor = EditorView.theme({
@@ -55,8 +97,9 @@
     const extensions = [
         basicSetup,
         StreamLanguage.define(stex),
-        EditorView.updateListener.of(onUpdate),
-        fixedHeightEditor
+        fixedHeightEditor,
+        BlockLocalChanges,
+        EditorView.lineWrapping
     ]
 
 
@@ -65,19 +108,9 @@
         socket = new WebSocket(`${serverUrl}/editDocWebsocket`);
 
         socket.addEventListener("message", (event) => {
-            const res: Message = JSON.parse(event.data);
-            console.log(res);
-            broadcastUpdate = true;
-            res.changes.forEach((change) => {
-                editorView.dispatch({
-                    changes: {
-                        from: change.from,
-                        to: change.to,
-                        insert: change.text,
-                    }
-                });
-            });
-            broadcastUpdate = false;
+            const message: Message = JSON.parse(event.data);
+            console.log(message);
+            applyUpdate(editorView.state.doc.toString(), message.changes)
         });
 
         fetch(`${serverUrl}/document`)
@@ -91,18 +124,14 @@
                     }),
                     parent: editor
                 });
+
+                // Spara editorn i store för delning med Toolbar
+                editorViewStore.set(editorView);
+                compileLatexStore.set(compileLatex);
             });
     });
-
-
-    function compileContent() {
-        const content = editorView.state.doc.toString(); // Get the current content from CodeMirror
-        compileLatex(content);
-    }
 </script>
 
-
-<button onclick={() => compileContent()}>Compile</button>
 <div id="editor" bind:this={editor}></div>
 
 <style>
@@ -113,17 +142,4 @@
         margin: auto;
     }
 
-    button {
-        padding: 10px 20px;
-        background-color: darkorange;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        align-items:flex-start;
-    }
-
-    button:hover {
-        background-color: orange;
-    }
 </style>
