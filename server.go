@@ -3,14 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"net/http"
-	"os"
-	"os/exec"
 	"slices"
-
 	"websocket-server/crdt"
 
 	"github.com/coder/websocket"
@@ -19,15 +15,10 @@ import (
 
 const frontendPort = "5173"
 
-type Change struct {
-	From   int    `json:"from"`   // Start index
-	To     int    `json:"to"`     // Slut index
-	Text   string `json:"text"`   // Tillagd text
-	UserID int    `json:"userId"` // AnvändarID för CRDT
-}
-
-type EditDocMessage struct {
-	Changes []Change `json:"changes"`
+type EditInstruction struct {
+	operation string
+	insertion string
+	uID       int
 }
 
 type Client struct {
@@ -35,15 +26,12 @@ type Client struct {
 	id    int
 }
 
-
-
 var document = crdt.DocumentFromStr(`\documentclass{article}
 \begin{document}
 abcd
-\end{document}`
+\end{document}`)
 var connections []Client
 var currId int = 0
-
 
 func getLocalIP() (string, error) {
 	conn, err := net.Dial("udp", "12.34.56.78:90")
@@ -65,14 +53,16 @@ func getDocument(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func broadcastMessage(ctx context.Context, message EditDocMessage, sender Client) {
+func broadcastMessage(ctx context.Context, message EditInstruction, sender Client) {
 
 	log.Printf("Broadcasting to %d clients\n", len(connections))
+
 	for _, c := range connections {
 		if c.id == sender.id {
 			continue
 		}
 		err := wsjson.Write(ctx, c.wscon, message)
+
 		if err != nil {
 			log.Printf("Failed to write websocket message: %s", err)
 		}
@@ -87,12 +77,6 @@ func removeConn(connToDelete Client) []Client {
 		}
 	}
 	return connections
-}
-
-func updateDocument(changes []Change) {
-	for _, change := range changes {
-		document = document[:change.From] + change.Text + document[change.To:]
-	}
 }
 
 func acceptConnection(w http.ResponseWriter, r *http.Request) Client {
@@ -131,25 +115,24 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer user.wscon.CloseNow()
 
-	var editDocMessage EditDocMessage
-
+	var newChange EditInstruction
 
 	for {
-		err := wsjson.Read(ctx, user.wscon, &editDocMessage)
+		err := wsjson.Read(ctx, user.wscon, &newChange)
+
 		if err != nil {
 			log.Printf("Failed to read websocket message: %s", err)
 			connections = removeConn(user)
 			return
 		}
 
-		log.Printf("Changes made: %v\n", editDocMessage)
-		updateDocument(editDocMessage.Changes)
-		broadcastMessage(ctx, editDocMessage, user)
+		log.Printf("Operation made: %s\n", newChange.operation)
+		broadcastMessage(ctx, newChange, user)
 
 	}
 }
 
-func compileDocument(w http.ResponseWriter, r *http.Request) {
+/* func compileDocument(w http.ResponseWriter, r *http.Request) {
 	document, err := io.ReadAll(r.Body)
 
 	if err != nil {
@@ -187,7 +170,7 @@ func servePdf(w http.ResponseWriter, r *http.Request) {
 	filenamePdf := fmt.Sprintf("%s.pdf", filename)
 	http.ServeFile(w, r, filenamePdf)
 
-}
+} */
 
 func middleware(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	ip, _ := getLocalIP()
@@ -211,9 +194,10 @@ func main() {
 	log.Printf("Server running on http://%s/\n", serverAddress)
 
 	http.HandleFunc("/document", middleware(getDocument))
+	//http.HandleFunc("/compileDocument", middleware(compileDocument))
+	//http.HandleFunc("/pdf", middleware(servePdf))
+
 	http.HandleFunc("/editDocWebsocket", editDocWebsocketHandler)
-	http.HandleFunc("/compileDocument", middleware(compileDocument))
-	http.HandleFunc("/pdf", middleware(servePdf))
 
 	err := http.ListenAndServe(serverAddress, nil)
 	log.Println(err)
