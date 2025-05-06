@@ -1,3 +1,11 @@
+/**
+
+För att kompilera:
+1. Gå till /wasm directory
+2. Kör: GOOS=js GOARCH=wasm go build -o ../frontend/src/wasm/main.wasm
+
+**/
+
 package main
 
 import (
@@ -49,12 +57,12 @@ func updateDocument(document string, changes []crdt.Change, cursorIndex int) crd
 		// TODO: give each user an ID
 		uID := 1
 		if change.Text == "" {
-			for i := change.To; i > change.From; i-- {
+			for i := change.To + 1; i > change.From; i-- {
 				doc.DeleteAtIndex(i)
 			}
 		} else {
-			for i := change.From; i <= change.To; i++ {
-				doc.LoadInsert(string(change.Text[i - change.From]), change.From, uID)
+			for i := change.From; i < change.To; i++ {
+				doc.LoadInsert(string(change.Text[i - change.From]), i, uID)
 			}
 		}
 	}
@@ -114,10 +122,3 @@ func main() {
 	registerCallbacks()
 	select {} // keep running
 }
-
-/**
-
-Var i wasm directory innan denna i terminalen:
-GOOS=js GOARCH=wasm go build -o ../frontend/static/wasm/main.wasm
-
-**/

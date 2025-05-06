@@ -61,8 +61,8 @@
         const changes: Change[] = [];
         tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
             changes.push({
-                from: fromA, 
-                to: toA,     
+                from: fromB, 
+                to: toB,     
                 text: inserted.toString() // Tillagd text, tom vid borttagning
             });
         });
