@@ -51,8 +51,8 @@ type UpdatedDocMessage struct {
 
 func DocumentFromStr(str string) Document {
 	doc := NewDocument()
-	for i := range len(str) {
-		doc.Insert(string(str[i]), 1)
+	for _, ch := range str {
+		doc.Insert(string(ch), 1)
 	}
 	return doc
 }

@@ -61,8 +61,10 @@ func updateDocument(document string, changes []crdt.Change, cursorIndex int) crd
 				doc.DeleteAtIndex(i)
 			}
 		} else {
-			for i := change.FromB; i < change.ToB; i++ {
-				doc.LoadInsert(string(change.Text[i - change.FromB]), i, uID)
+			i := 0
+			for _, ch := range change.Text {
+				doc.LoadInsert(string(ch), change.FromB + i, uID)
+				i++
 			}
 		}
 	}
