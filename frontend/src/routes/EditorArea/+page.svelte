@@ -32,10 +32,10 @@
 
 <div class="page-container">
     <Header/>
+    <div class="toolbar">
+        <Toolbar/>
+    </div>
     <div class="content">
-        <div class="toolbar">
-            <Toolbar/>
-        </div>
         <Editor {compileLatex} />
         <Viewer {pdfUrl} {compileCount}/>
     </div>
@@ -46,7 +46,7 @@
     .page-container {
         display: flex;
         flex-direction: column;
-        min-height: 100vh;
+        
     }
 
     .content {

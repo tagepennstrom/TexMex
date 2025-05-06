@@ -10,7 +10,7 @@
         
         {#if menuOpen}
         <nav class="dropdown">
-            <a href ="/routes">Home</a>
+            <a href ="/">Home</a>
             <a href ="/EditorArea">Editor</a>
         </nav>
     {/if}
@@ -19,7 +19,7 @@
 <style>
 
     .Header{
-        background-color :#e0f7fa;
+        background-color: #e0f7fa;
     }
 
     .menu-button{
