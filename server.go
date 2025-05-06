@@ -18,17 +18,35 @@ import (
 )
 
 const frontendPort = "5173"
-const filename = "document"
+
+type Change struct {
+	From   int    `json:"from"`   // Start index
+	To     int    `json:"to"`     // Slut index
+	Text   string `json:"text"`   // Tillagd text
+	UserID int    `json:"userId"` // AnvändarID för CRDT
+}
+
+type EditDocMessage struct {
+	Changes []Change `json:"changes"`
+}
+
+type Client struct {
+	wscon *websocket.Conn
+	id    int
+}
+
+
 
 var document = crdt.DocumentFromStr(`\documentclass{article}
 \begin{document}
-	abcd
-\end{document}`)
+abcd
+\end{document}`
+var connections []Client
+var currId int = 0
 
-var connections []*websocket.Conn
 
 func getLocalIP() (string, error) {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
+	conn, err := net.Dial("udp", "12.34.56.78:90")
 	if err != nil {
 		return "", err
 	}
@@ -47,20 +65,22 @@ func getDocument(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func broadcastMessage(ctx context.Context, message crdt.EditDocMessage, sender *websocket.Conn) {
+func broadcastMessage(ctx context.Context, message EditDocMessage, sender Client) {
+
 	log.Printf("Broadcasting to %d clients\n", len(connections))
 	for _, c := range connections {
-		if c == sender {
+		if c.id == sender.id {
 			continue
 		}
-		err := wsjson.Write(ctx, c, message)
+		err := wsjson.Write(ctx, c.wscon, message)
 		if err != nil {
 			log.Printf("Failed to write websocket message: %s", err)
 		}
 	}
 }
 
-func removeConn(connToDelete *websocket.Conn) []*websocket.Conn {
+func removeConn(connToDelete Client) []Client {
+	log.Printf("Removing user with ID: %d\n", connToDelete.id)
 	for i, c := range connections {
 		if c == connToDelete {
 			return slices.Delete(connections, i, i+1)
@@ -69,7 +89,14 @@ func removeConn(connToDelete *websocket.Conn) []*websocket.Conn {
 	return connections
 }
 
-func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
+func updateDocument(changes []Change) {
+	for _, change := range changes {
+		document = document[:change.From] + change.Text + document[change.To:]
+	}
+}
+
+func acceptConnection(w http.ResponseWriter, r *http.Request) Client {
+
 	ip, _ := getLocalIP()
 	frontendHost := fmt.Sprintf("%s:%s", ip, "5173")
 	opts := websocket.AcceptOptions{
@@ -78,40 +105,65 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	c, err := websocket.Accept(w, r, &opts)
 	if err != nil {
 		log.Printf("Failed to create websocket connection: %s", err)
+	}
+	currId++
+	user := Client{wscon: c, id: currId}
+	return user
+
+}
+
+func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
+	user := acceptConnection(w, r)
+	log.Printf("User connected with ID: %d\n", user.id)
+	connections = append(connections, user)
+
+	initialMessage := struct {
+		ID int `json:"id"`
+	}{ID: user.id}
+
+	// Send the ID to the client (use wsjson.Write to send a JSON message)
+	ctx := context.Background()
+	err := wsjson.Write(ctx, user.wscon, initialMessage)
+	if err != nil {
+		log.Printf("Failed to send connection ID to client: %s", err)
+		user.wscon.CloseNow()
 		return
 	}
-	defer c.CloseNow()
-	connections = append(connections, c)
+	defer user.wscon.CloseNow()
 
-	ctx := context.Background()
-	var editDocMessage crdt.EditDocMessage
+	var editDocMessage EditDocMessage
+
+
 	for {
-		err := wsjson.Read(ctx, c, &editDocMessage)
+		err := wsjson.Read(ctx, user.wscon, &editDocMessage)
 		if err != nil {
 			log.Printf("Failed to read websocket message: %s", err)
-			connections = removeConn(c)
+			connections = removeConn(user)
 			return
 		}
 
-		log.Printf("Changes made: %v\n", editDocMessage.Changes)
-		broadcastMessage(ctx, editDocMessage, c)
+		log.Printf("Changes made: %v\n", editDocMessage)
+		updateDocument(editDocMessage.Changes)
+		broadcastMessage(ctx, editDocMessage, user)
+
 	}
 }
 
 func compileDocument(w http.ResponseWriter, r *http.Request) {
 	document, err := io.ReadAll(r.Body)
+
 	if err != nil {
 		errorMessage := fmt.Sprintf("Error reading request body: %s", err)
 		log.Println(errorMessage)
 		http.Error(w, errorMessage, http.StatusBadRequest)
 		return
 	}
+
 	r.Body.Close()
-
 	filenameLatex := fmt.Sprintf("%s.tex", filename)
-
 	const writeReadPermission = os.FileMode(0666)
 	err = os.WriteFile(filenameLatex, document, writeReadPermission)
+
 	if err != nil {
 		errorMessage := fmt.Sprintf("Error creating LaTeX file: %s", err)
 		log.Println(errorMessage)
@@ -127,7 +179,6 @@ func compileDocument(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errorMessage, http.StatusInternalServerError)
 		return
 	}
-
 	fmt.Fprintf(w, `{"pdfUrl": "/pdf"}`)
 }
 
@@ -135,6 +186,7 @@ func servePdf(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/pdf")
 	filenamePdf := fmt.Sprintf("%s.pdf", filename)
 	http.ServeFile(w, r, filenamePdf)
+
 }
 
 func middleware(handlerFunc http.HandlerFunc) http.HandlerFunc {
@@ -156,7 +208,7 @@ func main() {
 	const port = "8080"
 	ip, _ := getLocalIP()
 	serverAddress := fmt.Sprintf("%s:%s", ip, port)
-	log.Printf("Server running on %s\n", serverAddress)
+	log.Printf("Server running on http://%s/\n", serverAddress)
 
 	http.HandleFunc("/document", middleware(getDocument))
 	http.HandleFunc("/editDocWebsocket", editDocWebsocketHandler)
