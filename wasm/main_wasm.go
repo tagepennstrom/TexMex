@@ -57,12 +57,12 @@ func updateDocument(document string, changes []crdt.Change, cursorIndex int) crd
 		// TODO: give each user an ID
 		uID := 1
 		if change.Text == "" {
-			for i := change.To + 1; i > change.From; i-- {
+			for i := change.ToA + 1; i > change.FromA; i-- {
 				doc.DeleteAtIndex(i)
 			}
 		} else {
-			for i := change.From; i < change.To; i++ {
-				doc.LoadInsert(string(change.Text[i - change.From]), i, uID)
+			for i := change.FromB; i < change.ToB; i++ {
+				doc.LoadInsert(string(change.Text[i - change.FromB]), i, uID)
 			}
 		}
 	}
@@ -86,8 +86,10 @@ func updateDocumentWrap(this js.Value, args []js.Value) interface{} {
 	for i := 0; i < len(changes); i++ {
 		change := args[1].Index(i)
 		changes[i] = crdt.Change{
-			From: change.Get("from").Int(),
-			To: change.Get("to").Int(),
+			FromA: change.Get("fromA").Int(),
+			ToA: change.Get("toA").Int(),
+			FromB: change.Get("fromB").Int(),
+			ToB: change.Get("toB").Int(),
 			Text: change.Get("text").String(),
 		}
 	}

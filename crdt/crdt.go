@@ -30,8 +30,10 @@ type CoordT struct {
 }
 
 type Change struct {
-	From int    `json:"from"` // Start index
-	To   int    `json:"to"`   // Slut index
+	FromA int    `json:"fromA"` // Start index original document
+	ToA   int    `json:"toA"`   // Slut index original document
+	FromB int    `json:"fromB"` // Start index new document
+	ToB   int    `json:"toB"`   // Slut index new document
 	Text string `json:"text"` // Tillagd text
 }
 

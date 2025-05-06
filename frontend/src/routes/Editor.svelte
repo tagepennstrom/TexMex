@@ -19,8 +19,10 @@
 
     
     type Change = {
-        from: number;   // Start index
-        to: number;     // Slut index
+        fromA: number;   // Start index
+        toA: number;     // Slut index
+        fromB: number;   // Start index
+        toB: number;     // Slut index
         text: string;   // Tillagd text, tom vid borttagning
     }
     
@@ -61,8 +63,10 @@
         const changes: Change[] = [];
         tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
             changes.push({
-                from: fromB, 
-                to: toB,     
+                fromA: fromA, 
+                toA: toA,     
+                fromB: fromB, 
+                toB: toB,     
                 text: inserted.toString() // Tillagd text, tom vid borttagning
             });
         });
