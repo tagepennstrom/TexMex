@@ -7,6 +7,8 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"os/exec"
 	"slices"
 
 	"github.com/coder/websocket"
@@ -14,6 +16,7 @@ import (
 )
 
 const frontendPort = "5173"
+const filename = "document"
 
 type EditInstruction struct {
 	operation string
@@ -146,7 +149,7 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-/* func compileDocument(w http.ResponseWriter, r *http.Request) {
+func compileDocument(w http.ResponseWriter, r *http.Request) {
 	document, err := io.ReadAll(r.Body)
 
 	if err != nil {
@@ -184,7 +187,7 @@ func servePdf(w http.ResponseWriter, r *http.Request) {
 	filenamePdf := fmt.Sprintf("%s.pdf", filename)
 	http.ServeFile(w, r, filenamePdf)
 
-} */
+}
 
 func middleware(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	ip, _ := getLocalIP()
@@ -209,8 +212,8 @@ func main() {
 
 	http.HandleFunc("/document", middleware(getDocument))
 	http.HandleFunc("/saveDocument", middleware(saveDocument))
-	//http.HandleFunc("/compileDocument", middleware(compileDocument))
-	//http.HandleFunc("/pdf", middleware(servePdf))
+	http.HandleFunc("/compileDocument", middleware(compileDocument))
+	http.HandleFunc("/pdf", middleware(servePdf))
 
 	http.HandleFunc("/editDocWebsocket", editDocWebsocketHandler)
 
