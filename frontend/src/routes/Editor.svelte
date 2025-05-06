@@ -71,18 +71,27 @@
             });
         });
 
-        // TODO: gör så att funktionen uppdaterar ett globalt dokument
-        // istället för att returnera ett nytt
-        UpdateDocument(document, changes, editorView.state.selection.main.anchor)
+        const document = editorView.state.doc.toString();
+        const updatedDocMessage: UpdatedDocMessage = UpdateDocument(
+            document,
+            changes,
+            editorView.state.selection.main.anchor
+        )
 
         const message: Message = {
-            document: editorView.state.doc.toString(),
+            document: document,
             changes: changes,
             cursorIndex: cursorIndex,
         };
         console.log("Sending message:", message);
-
         socket.send(JSON.stringify(message));
+
+        const serverUrl = `http://${location.hostname}:8080`;
+        fetch(`${serverUrl}/saveDocument`, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain" },
+            body: updatedDocMessage.document,
+        })
     }
 
     const BlockLocalChanges = EditorState.transactionFilter.of(tr => {

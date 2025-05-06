@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
 	"slices"
-	"websocket-server/crdt"
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
@@ -26,10 +26,10 @@ type Client struct {
 	id    int
 }
 
-var document = crdt.DocumentFromStr(`\documentclass{article}
+var document = `\documentclass{article}
 \begin{document}
-abcd
-\end{document}`)
+	abcd
+\end{document}`
 var connections []Client
 var currId int = 0
 
@@ -45,12 +45,26 @@ func getLocalIP() (string, error) {
 }
 
 func getDocument(w http.ResponseWriter, r *http.Request) {
-	_, err := w.Write([]byte(document.ToString()))
+	_, err := w.Write([]byte(document))
 	if err != nil {
 		errorMessage := fmt.Sprintf("Failed to write document: %s", err)
 		log.Println(errorMessage)
 		http.Error(w, errorMessage, http.StatusInternalServerError)
 	}
+}
+
+func saveDocument(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		errorMessage := fmt.Sprintf("Error reading request body: %s", err)
+		log.Println(errorMessage)
+		http.Error(w, errorMessage, http.StatusBadRequest)
+		return
+	}
+	r.Body.Close()
+
+	log.Println("Saving document")
+	document = string(body)
 }
 
 func broadcastMessage(ctx context.Context, message EditInstruction, sender Client) {
@@ -194,6 +208,7 @@ func main() {
 	log.Printf("Server running on http://%s/\n", serverAddress)
 
 	http.HandleFunc("/document", middleware(getDocument))
+	http.HandleFunc("/saveDocument", middleware(saveDocument))
 	//http.HandleFunc("/compileDocument", middleware(compileDocument))
 	//http.HandleFunc("/pdf", middleware(servePdf))
 
