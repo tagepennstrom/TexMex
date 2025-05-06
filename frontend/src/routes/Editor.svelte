@@ -7,7 +7,8 @@
     import { stex } from "@codemirror/legacy-modes/mode/stex";
     import { get } from "svelte/store";
     import { editorView as editorViewStore , compileLatexStore} from "$lib/stores";
-
+    import { autocompletion } from "@codemirror/autocomplete";
+    import { myCompletions } from "$lib/completions";
 
 
     let { compileLatex } = $props();
@@ -38,8 +39,9 @@
         StreamLanguage.define(stex),
         EditorView.updateListener.of(onUpdate),
         fixedHeightEditor,
-        EditorView.lineWrapping
-    ];
+        EditorView.lineWrapping,
+        autocompletion({ override: [myCompletions] })];
+
 
     onMount(() => {
         socket = new WebSocket(`${serverUrl}/editDocWebsocket`);
