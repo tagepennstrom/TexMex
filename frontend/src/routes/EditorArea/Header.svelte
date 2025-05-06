@@ -10,17 +10,13 @@
         
         {#if menuOpen}
         <nav class="dropdown">
-            <a href ="/routes">Home</a>
+            <a href ="/">Home</a>
             <a href ="/EditorArea">Editor</a>
         </nav>
     {/if}
 </div>
 
 <style>
-
-    .Header{
-        background-color :#e0f7fa;
-    }
 
     .menu-button{
         position: absolute;
@@ -41,6 +37,10 @@
         padding: 10px;
         font-size: 1 rem;
         cursor: pointer;
+    }
+
+    .Header{
+        background-color :#e0f7fa;
     }
 
     img {

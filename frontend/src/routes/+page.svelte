@@ -1,29 +1,8 @@
 <script lang='ts'>
     import Header from './Header.svelte';
-    import Viewer from './Viewer.svelte';
-    import Editor from './Editor.svelte';
-    import Footer from './Footer.svelte';
-	import Toolbar from './Toolbar.svelte';
 
-
-    let pdfUrl = $state("");
-    let compileCount = $state(0);
-
-    async function compileLatex(content: string) {
-        const res = await fetch("http://localhost:8080/compileDocument", {
-            method: "POST",
-            headers: { "Content-Type": "text/plain" },
-            body: content
-        });
-
-        if (!res.ok) {
-            console.error("Failed to compile LaTeX:", await res.text());
-            return;
-        }
-
-        const data = await res.json();
-        pdfUrl = `http://localhost:8080${data.pdfUrl}`;
-        compileCount++;
+    function handleClick() {
+        window.location.href = "/EditorArea";
     }
 </script>
 
@@ -32,14 +11,8 @@
 <div class="page-container">
     <Header/>
     <div class="content">
-        <div class="toolbar">
-            <Toolbar/>
-        </div>
-        <!-- <button class="compile-button" onclick={compileLatex(content)}>Compile</button> -->
-        <Editor {compileLatex} />
-        <Viewer {pdfUrl} {compileCount}/>
+        <button class="Bold" onclick={handleClick} title ="ToEditor"><strong>To the editor</strong></button>
     </div>
-    <Footer/>
 </div>
 
 <style>
@@ -52,11 +25,4 @@
     .content {
         flex: 1;
     }
-
-    .compile-button {
-        float: top;
-    }
-    
-
 </style>
-
