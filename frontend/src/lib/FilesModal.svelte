@@ -16,7 +16,7 @@
 
 <style>
     .backdrop{
-        width: 30vh;
+        width: 50%;
         height: 50vh;
         background-color: #e0f7fa;
     }
