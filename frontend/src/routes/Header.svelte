@@ -12,6 +12,7 @@
         <nav class="dropdown">
             <a href ="/">Home</a>
             <a href ="/EditorArea">Editor</a>
+            <a href = "/SavedProjects">Saved Projects</a>
         </nav>
     {/if}
 </div>

@@ -1,10 +1,10 @@
 <script lang='ts'>
+	import AboutUs from './AboutUs.svelte';
+	import Footer from './Footer.svelte';
     import Header from './Header.svelte';
     import HiddenToolbar from './HiddenToolbar.svelte';
+	import MyProjects from './MyProjects.svelte';
 
-    function handleClick() {
-        window.location.href = "/EditorArea";
-    }
 </script>
 
 
@@ -14,9 +14,11 @@
     <div class="hiddenToolbar">
         <HiddenToolbar/>
     </div>
-    <div class="content">
-        <button class="ToEditor" onclick={handleClick} title ="ToEditor"><strong>To the editor</strong></button>
+    <div class ="contents">
+        <MyProjects/>
+        <AboutUs/>
     </div>
+    <Footer/>
 </div>
 
 <style>
@@ -24,19 +26,17 @@
         display: flex;
         flex-direction: column;
         min-height: 100vh;
+        background-color: #e0f7fa;
     }
 
-    .ToEditor{
-        position: relative;
-        top: 1rem;
-        left: 1rem;
-        background: none;
-        border: none;
-        font-size: 1.5rem;
-        cursor: pointer;
+    .contents{
+        
     }
 
-    .content {
-        flex: 1;
+
+    .Footer{
+        align-self: center;
     }
+
+
 </style>

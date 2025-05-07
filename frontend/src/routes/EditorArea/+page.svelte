@@ -1,5 +1,5 @@
 <script lang='ts'>
-    import Header from './Header.svelte';
+    import Header from '../Header.svelte';
     import Viewer from './Viewer.svelte';
     import Editor from './Editor.svelte';
     import Footer from './Footer.svelte';

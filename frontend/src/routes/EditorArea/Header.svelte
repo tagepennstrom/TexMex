@@ -1,3 +1,4 @@
+<!---- THIS COMPONENT IS NOT USED AS OF NOW, WE USE THE HEADER IN THE ROUTES TAB>
 <script>
     let menuOpen = false;
 </script>
