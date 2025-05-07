@@ -50,7 +50,7 @@ func cursorInsertWrap(this js.Value, args []js.Value) interface{} {
 	return nil
 }
 
-func updateDocument(document string, changes []crdt.Change, cursorIndex int) crdt.UpdatedDocMessage {
+func UpdateDocument(document string, changes []crdt.Change, cursorIndex int) crdt.UpdatedDocMessage {
 	doc = crdt.DocumentFromStr(document)
 	doc.SetCursorAt(cursorIndex)
 	for _, change := range changes {
@@ -62,13 +62,13 @@ func updateDocument(document string, changes []crdt.Change, cursorIndex int) crd
 			}
 		} else {
 			for i := change.FromB; i < change.ToB; i++ {
-				doc.LoadInsert(string(change.Text[i - change.FromB]), i, uID)
+				doc.LoadInsert(string(change.Text[i-change.FromB]), i, uID)
 			}
 		}
 	}
 
 	return crdt.UpdatedDocMessage{
-		Document: doc.ToString(),
+		Document:    doc.ToString(),
 		CursorIndex: doc.CursorIndex(),
 	}
 }
@@ -87,13 +87,13 @@ func updateDocumentWrap(this js.Value, args []js.Value) interface{} {
 		change := args[1].Index(i)
 		changes[i] = crdt.Change{
 			FromA: change.Get("fromA").Int(),
-			ToA: change.Get("toA").Int(),
+			ToA:   change.Get("toA").Int(),
 			FromB: change.Get("fromB").Int(),
-			ToB: change.Get("toB").Int(),
-			Text: change.Get("text").String(),
+			ToB:   change.Get("toB").Int(),
+			Text:  change.Get("text").String(),
 		}
 	}
-	res := updateDocument(document, changes, cursorIndex)
+	res := UpdateDocument(document, changes, cursorIndex)
 	var m = make(map[string]interface{})
 	m["document"] = res.Document
 	m["cursorIndex"] = res.CursorIndex
@@ -118,7 +118,6 @@ func registerCallbacks() {
 }
 
 func main() {
-	//doc.LoadInsert("a", 1, 1)
 
 	println("WASM is alive")
 	registerCallbacks()

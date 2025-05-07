@@ -3,13 +3,14 @@
 	<head>
 		<meta charset="utf-8" />
 
-		<script src="/src/wasm/wasm_exec.js"></script>
+		<script src="/wasm/wasm_exec.js"></script>
 		<script>
 			const go = new Go();
-			WebAssembly.instantiateStreaming(fetch("/src/wasm/main.wasm"), go.importObject).then((result) => {
+			WebAssembly.instantiateStreaming(fetch("/wasm/main.wasm"), go.importObject).then((result) => {
 				go.run(result.instance);
 			});
 		</script>
+		<script src="/src/lib/websocket.ts"></script>
 
 		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />

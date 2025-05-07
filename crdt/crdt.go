@@ -34,20 +34,25 @@ type Change struct {
 	ToA   int    `json:"toA"`   // Slut index original document
 	FromB int    `json:"fromB"` // Start index new document
 	ToB   int    `json:"toB"`   // Slut index new document
-	Text string `json:"text"` // Tillagd text
+	Text  string `json:"text"`  // Tillagd text
 }
 
 type EditDocMessage struct {
-	Document string `json:"document"`
-	Changes  []Change `json:"changes"`
-	CursorIndex int `json:"cursorIndex"`
+	Document    string   `json:"document"`
+	Changes     []Change `json:"changes"`
+	CursorIndex int      `json:"cursorIndex"`
 }
 
 type UpdatedDocMessage struct {
-	Document string `json:"document"`
-	CursorIndex int `json:"cursorIndex"`
+	Document    string `json:"document"`
+	CursorIndex int    `json:"cursorIndex"`
 }
 
+type EditInstruction struct {
+	operation string
+	insertion string
+	uID       int
+}
 
 func DocumentFromStr(str string) Document {
 	doc := NewDocument()

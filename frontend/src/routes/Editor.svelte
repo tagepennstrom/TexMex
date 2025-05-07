@@ -1,3 +1,9 @@
+<script module lang="ts">
+    declare var Go: any;
+</script>
+
+
+
 <script lang='ts'>
     import {basicSetup, EditorView} from "codemirror"
     import {onMount} from 'svelte'
@@ -8,6 +14,19 @@
 
 
 
+  // … your other imports …
+
+  let wasmReady = false;
+
+  onMount(async () => {
+    // At this point Go and your exported wrapper functions exist...
+    // (they were loaded in app.html)
+    wasmReady = true;
+
+    // Now it’s safe to call:
+    const test = window.UpdateDocument("foo", [], 0);
+    console.log("WASM says:", test);
+  });
 
     let { compileLatex } = $props();
     let socket: WebSocket;
@@ -39,11 +58,13 @@
 
     async function applyUpdate(document: string, changes: Change[]) {
         updateFromCode = true;
-        const updatedDocMessage: UpdatedDocMessage = UpdateDocument(
-            document,
-            changes,
+
+        const updatedDocMessage: UpdatedDocMessage  = await UpdateDocument(
+            document, 
+            changes, 
             editorView.state.selection.main.anchor
-        )
+        );
+
         console.log(updatedDocMessage);
         editorView.dispatch({
             changes: {
@@ -73,6 +94,7 @@
 
         // TODO: gör så att funktionen uppdaterar ett globalt dokument
         // istället för att returnera ett nytt
+
         UpdateDocument(document, changes, editorView.state.selection.main.anchor)
 
         const message: Message = {
