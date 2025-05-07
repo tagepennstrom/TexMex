@@ -86,7 +86,7 @@
         console.log("Sending message:", message);
         socket.send(JSON.stringify(message));
 
-        const serverUrl = `http://${location.hostname}:8080`;
+        const serverUrl = `http://83.233.230.209:8080`;
         fetch(`${serverUrl}/saveDocument`, {
             method: "POST",
             headers: { "Content-Type": "text/plain" },
@@ -117,7 +117,7 @@
 
 
     onMount(() => {
-        const serverUrl = `http://${location.hostname}:8080`;
+        const serverUrl = `http://83.233.230.209:8080`;
         socket = new WebSocket(`${serverUrl}/editDocWebsocket`);
 
         socket.addEventListener("message", (event) => {

@@ -98,7 +98,8 @@ func removeConn(connToDelete Client) []Client {
 
 func acceptConnection(w http.ResponseWriter, r *http.Request) Client {
 
-	ip, _ := getLocalIP()
+	// ip, _ := getLocalIP()
+	ip := "83.233.230.209"
 	frontendHost := fmt.Sprintf("%s:%s", ip, "5173")
 	opts := websocket.AcceptOptions{
 		OriginPatterns: []string{frontendHost},
@@ -122,7 +123,6 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		ID int `json:"id"`
 	}{ID: user.id}
 
-	// Send the ID to the client (use wsjson.Write to send a JSON message)
 	ctx := context.Background()
 	err := wsjson.Write(ctx, user.wscon, initialMessage)
 	if err != nil {
@@ -190,7 +190,8 @@ func servePdf(w http.ResponseWriter, r *http.Request) {
 }
 
 func middleware(handlerFunc http.HandlerFunc) http.HandlerFunc {
-	ip, _ := getLocalIP()
+	//ip, _ := getLocalIP()
+	ip := "83.233.230.209"
 	frontendUrl := fmt.Sprintf("http://%s:%s", ip, frontendPort)
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Access-Control-Allow-Origin", frontendUrl)
