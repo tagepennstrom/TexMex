@@ -63,7 +63,7 @@ func TestDeleteLetter(t *testing.T) {
 	changes := []Change{
 		{
 			FromA: cursorPos,
-			ToA:   cursorPos,
+			ToA:   cursorPos + 1,
 			FromB: cursorPos,
 			ToB:   cursorPos,
 			Text:  "",
@@ -84,7 +84,7 @@ func TestDeleteSelection(t *testing.T) {
 	changes := []Change{
 		{
 			FromA: cursorPos,
-			ToA:   cursorPos + 5,
+			ToA:   cursorPos + 6,
 			FromB: cursorPos,
 			ToB:   cursorPos,
 			Text:  "",
@@ -149,7 +149,7 @@ func TestDeleteEarlierOnSameLine(t *testing.T) {
 	changes := []Change{
 		{
 			FromA: 0,
-			ToA:   1,
+			ToA:   2,
 			FromB: 0,
 			ToB:   0,
 			Text:  "",
@@ -170,7 +170,7 @@ func TestDeleteAfterOnSameLine(t *testing.T) {
 	changes := []Change{
 		{
 			FromA: 3,
-			ToA:   6,
+			ToA:   7,
 			FromB: 3,
 			ToB:   3,
 			Text:  "",

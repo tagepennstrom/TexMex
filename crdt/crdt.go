@@ -55,7 +55,7 @@ func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedD
 		// TODO: give each user an ID
 		uID := 1
 		if change.Text == "" {
-			for i := change.ToA + 1; i > change.FromA; i-- {
+			for i := change.ToA; i > change.FromA; i-- {
 				doc.DeleteAtIndex(i)
 			}
 		} else {
@@ -94,7 +94,7 @@ func (doc *Document) ToString() string {
 
 func (doc *Document) CursorIndex() int {
 	i := 0
-	item := doc.Textcontent.Head.Next
+	item := doc.Textcontent.Head
 	for item != nil {
 		if item == doc.CursorPosition {
 			return i
@@ -107,7 +107,7 @@ func (doc *Document) CursorIndex() int {
 
 func (doc *Document) SetCursorAt(index int) {
 	i := 0
-	item := doc.Textcontent.Head.Next
+	item := doc.Textcontent.Head
 	for item != nil {
 		if i == index {
 			doc.CursorPosition = item
@@ -392,6 +392,9 @@ func (d *Document) LoadInsert(letter string, index int, uID int) {
 	}
 
 	d.Textcontent = Insertion(letter, location, d.Textcontent, uID)
+	if d.CursorIndex() == index {
+		d.CursorForward()
+	} 
 }
 
 func (d *Document) MoveCursor(index int) {
@@ -413,9 +416,9 @@ func (d *Document) MoveCursor(index int) {
 
 func (d *Document) DeleteAtIndex(index int) {
 	cursorIndex := d.CursorIndex()
-	d.SetCursorAt(index - 1)
+	d.SetCursorAt(index)
 	d.Delete()
-	if cursorIndex == index {
+	if cursorIndex >= index {
 		d.SetCursorAt(cursorIndex - 1)
 	} else {
 		d.SetCursorAt(cursorIndex)
