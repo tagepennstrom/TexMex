@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { insertBold, insertItalic, insertUnderline, compile, insertNewline } from '$lib/index';
+    import { insertBold, insertItalic, insertUnderline, compile, insertNewline, toggleFilesModal} from '$lib/index';
     import { onMount, onDestroy } from 'svelte';
-
+    import { showFilesModal } from '$lib/stores';
     let handleKeydown: (event: KeyboardEvent) => void;
 
     onMount(() => {
@@ -33,9 +33,11 @@
             document.removeEventListener('keydown', handleKeydown);
         });
     });
+        
 </script>
 
 <div class="Toolbar">
+    <button class="Files" onclick={toggleFilesModal} title="Show files">Files</button>
     <button class="Bold" onclick={insertBold} title ="Bold (crtl + b)"><strong>B</strong></button>
     <button class="Italic" onclick={insertItalic} title="Italic (crtl + i)"><em>I</em></button>
     <button class="Underline" onclick={insertUnderline} title="Underline (crtl + u)"><u>U</u></button>
@@ -53,6 +55,15 @@
     background-color: #e0f7fa;
     border-bottom: 1px solid #ccc;
     align-items: center;
+    }
+
+    .Files {
+        padding: 10px 20px;
+        background-color: rgb(246, 137, 4);
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
     }
 
     .Bold {

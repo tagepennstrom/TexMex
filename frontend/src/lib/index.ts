@@ -1,5 +1,6 @@
 import { get } from 'svelte/store';
 import { editorView, compileLatexStore } from "$lib/stores";
+import { showFilesModal } from '$lib/stores';
 
 
 
@@ -95,6 +96,10 @@ export function compile() {
         compileLatex(content);
     }
  }
+ 
+export const toggleFilesModal = () => {
+    showFilesModal.update(value => !value);
+};
 
 
 

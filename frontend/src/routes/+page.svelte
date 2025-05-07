@@ -4,6 +4,7 @@
     import Editor from './Editor.svelte';
     import Footer from './Footer.svelte';
 	import Toolbar from './Toolbar.svelte';
+    import FilesModal from '$lib/FilesModal.svelte';
 
 
     let pdfUrl = $state("");
@@ -35,6 +36,7 @@
     <div class="content">
         <div class="toolbar">
             <Toolbar/>
+            <FilesModal/>
         </div>
         <Editor {compileLatex} />
         <Viewer {pdfUrl} {compileCount}/>
