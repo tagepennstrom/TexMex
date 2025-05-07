@@ -100,7 +100,8 @@ func removeConn(connToDelete Client) []Client {
 
 func acceptConnection(w http.ResponseWriter, r *http.Request) Client {
 
-	ip, _ := getLocalIP()
+	//ip, _ := getLocalIP()
+	ip := "83.233.230.209"
 	frontendHost := fmt.Sprintf("%s:%s", ip, "5173")
 	opts := websocket.AcceptOptions{
 		OriginPatterns: []string{frontendHost},
@@ -126,6 +127,7 @@ func handleClientsMessages(client Client) {
 	defer client.wscon.CloseNow()
 
 	for message := range client.messageChannel {
+		log.Printf("Client %d received message", client.id)
 		err := wsjson.Write(context.Background(), client.wscon, message)
 		if err != nil {
 			log.Printf("Failed to send message to client %d: %s", client.id, err)
@@ -152,21 +154,23 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var newChange EditInstruction
+	go func() {
+		var newChange EditInstruction
 
-	for {
-		err := wsjson.Read(ctx, user.wscon, &newChange)
+		for {
+			err := wsjson.Read(ctx, user.wscon, &newChange)
 
-		if err != nil {
-			log.Printf("Failed to read websocket message: %s", err)
-			connections = removeConn(user)
-			return
+			if err != nil {
+				log.Printf("Failed to read websocket message: %s", err)
+				connections = removeConn(user)
+				return
+			}
+
+			log.Printf("Operation made: %s\n", newChange.operation)
+			broadcastMessage(newChange, user)
+
 		}
-
-		log.Printf("Operation made: %s\n", newChange.operation)
-		broadcastMessage(newChange, user)
-
-	}
+	}()
 }
 
 func compileDocument(w http.ResponseWriter, r *http.Request) {
@@ -210,7 +214,8 @@ func servePdf(w http.ResponseWriter, r *http.Request) {
 }
 
 func middleware(handlerFunc http.HandlerFunc) http.HandlerFunc {
-	ip, _ := getLocalIP()
+	// ip, _ := getLocalIP()
+	ip := "83.233.230.209"
 	frontendUrl := fmt.Sprintf("http://%s:%s", ip, frontendPort)
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Access-Control-Allow-Origin", frontendUrl)
@@ -228,7 +233,7 @@ func main() {
 	const port = "8080"
 	ip, _ := getLocalIP()
 	serverAddress := fmt.Sprintf("%s:%s", ip, port)
-	log.Printf("Server running on http://%s/\n", serverAddress)
+	log.Printf("Server running on http://83.233.230.209/\n", serverAddress)
 
 	http.HandleFunc("/document", middleware(getDocument))
 	http.HandleFunc("/saveDocument", middleware(saveDocument))

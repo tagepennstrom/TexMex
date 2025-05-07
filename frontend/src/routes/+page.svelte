@@ -10,7 +10,7 @@
     let compileCount = $state(0);
 
     async function compileLatex(content: string) {
-        const serverUrl = `http://${location.hostname}:8080`;
+        const serverUrl = `http://83.233.230.209:8080`;
         const res = await fetch(`${serverUrl}/compileDocument`, {
             method: "POST",
             headers: { "Content-Type": "text/plain" },
