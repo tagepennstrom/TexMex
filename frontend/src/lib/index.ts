@@ -1,4 +1,3 @@
-// src/lib/index.ts
 import { get } from 'svelte/store';
 import { editorView, compileLatexStore } from "$lib/stores";
 
@@ -91,6 +90,8 @@ export function compile() {
 
     if (view && compileLatex) {
         let content = view.state.doc.toString();
+
+        
         compileLatex(content);
     }
  }
