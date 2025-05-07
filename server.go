@@ -25,8 +25,9 @@ type EditInstruction struct {
 }
 
 type Client struct {
-	wscon *websocket.Conn
-	id    int
+	wscon          *websocket.Conn
+	id             int
+	messageChannel chan EditInstruction
 }
 
 var document = `\documentclass{article}
@@ -70,18 +71,19 @@ func saveDocument(w http.ResponseWriter, r *http.Request) {
 	document = string(body)
 }
 
-func broadcastMessage(ctx context.Context, message EditInstruction, sender Client) {
-
+func broadcastMessage(message EditInstruction, sender Client) {
 	log.Printf("Broadcasting to %d clients\n", len(connections))
-
 	for _, c := range connections {
 		if c.id == sender.id {
 			continue
 		}
-		err := wsjson.Write(ctx, c.wscon, message)
-
-		if err != nil {
-			log.Printf("Failed to write websocket message: %s", err)
+		select {
+		case c.messageChannel <- message:
+		default:
+			log.Printf("Client %d's message channel is full. Most Likely Timed out. Closing connection\n", c.id)
+			connections = removeConn(c)
+			close(c.messageChannel)
+			// Är det här rätt lösning? TODO: tänk över detta, varför can vår channel vara full?
 		}
 	}
 }
@@ -108,9 +110,29 @@ func acceptConnection(w http.ResponseWriter, r *http.Request) Client {
 		log.Printf("Failed to create websocket connection: %s", err)
 	}
 	currId++
-	user := Client{wscon: c, id: currId}
+	user := Client{
+		wscon:          c,
+		id:             currId,
+		messageChannel: make(chan EditInstruction, 10),
+	} // Bra bufferstorlek??? Ny forskningsfråga!?!?
+
+	go handleClientsMessages(user)
+
 	return user
 
+}
+
+func handleClientsMessages(client Client) {
+	defer client.wscon.CloseNow()
+
+	for message := range client.messageChannel {
+		err := wsjson.Write(context.Background(), client.wscon, message)
+		if err != nil {
+			log.Printf("Failed to send message to client %d: %s", client.id, err)
+			connections = removeConn(client)
+			return
+		}
+	}
 }
 
 func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
@@ -122,7 +144,6 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		ID int `json:"id"`
 	}{ID: user.id}
 
-	// Send the ID to the client (use wsjson.Write to send a JSON message)
 	ctx := context.Background()
 	err := wsjson.Write(ctx, user.wscon, initialMessage)
 	if err != nil {
@@ -130,7 +151,6 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		user.wscon.CloseNow()
 		return
 	}
-	defer user.wscon.CloseNow()
 
 	var newChange EditInstruction
 
@@ -144,7 +164,7 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log.Printf("Operation made: %s\n", newChange.operation)
-		broadcastMessage(ctx, newChange, user)
+		broadcastMessage(newChange, user)
 
 	}
 }
