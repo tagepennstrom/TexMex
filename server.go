@@ -19,8 +19,10 @@ const frontendPort = "5173"
 const filename = "document"
 
 type Change struct {
-	From   int    `json:"from"`   // Start index
-	To     int    `json:"to"`     // Slut index
+	FromA  int    `json:"fromA"`  // Start index
+	ToA    int    `json:"toA"`    // Slut index
+	FromB  int    `json:"fromB"`  // Start index
+	ToB    int    `json:"toB"`    // Slut index
 	Text   string `json:"text"`   // Tillagd text
 	UserID int    `json:"userId"` // AnvändarID för CRDT
 }

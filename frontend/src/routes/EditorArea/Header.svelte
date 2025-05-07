@@ -1,3 +1,4 @@
+<!---- THIS COMPONENT IS NOT USED AS OF NOW, WE USE THE HEADER IN THE ROUTES TAB>
 <script>
     let menuOpen = false;
 </script>
@@ -12,16 +13,11 @@
         <nav class="dropdown">
             <a href ="/">Home</a>
             <a href ="/EditorArea">Editor</a>
-            <a href = "/SavedProjects">Saved Projects</a>
         </nav>
     {/if}
 </div>
 
 <style>
-
-    .Header{
-        background-color: #e0f7fa;
-    }
 
     .menu-button{
         position: absolute;
@@ -42,6 +38,10 @@
         padding: 10px;
         font-size: 1 rem;
         cursor: pointer;
+    }
+
+    .Header{
+        background-color :#e0f7fa;
     }
 
     img {
