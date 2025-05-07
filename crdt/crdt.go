@@ -48,6 +48,31 @@ type UpdatedDocMessage struct {
 	CursorIndex int `json:"cursorIndex"`
 }
 
+func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedDocMessage {
+	doc := DocumentFromStr(document)
+	doc.SetCursorAt(cursorIndex)
+	for _, change := range changes {
+		// TODO: give each user an ID
+		uID := 1
+		if change.Text == "" {
+			for i := change.ToA + 1; i > change.FromA; i-- {
+				doc.DeleteAtIndex(i)
+			}
+		} else {
+			i := 0
+			for _, ch := range change.Text {
+				doc.LoadInsert(string(ch), change.FromB + i, uID)
+				i++
+			}
+		}
+	}
+
+	return UpdatedDocMessage{
+		Document: doc.ToString(),
+		CursorIndex: doc.CursorIndex(),
+	}
+}
+
 
 func DocumentFromStr(str string) Document {
 	doc := NewDocument()
