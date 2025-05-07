@@ -18,16 +18,21 @@ import (
 const frontendPort = "5173"
 const filename = "document"
 
-type EditInstruction struct {
-	operation string
-	insertion string
-	uID       int
+type Change struct {
+	From   int    `json:"from"`   // Start index
+	To     int    `json:"to"`     // Slut index
+	Text   string `json:"text"`   // Tillagd text
+	UserID int    `json:"userId"` // AnvändarID för CRDT
+}
+
+type EditDocMessage struct {
+	Changes []Change `json:"changes"`
 }
 
 type Client struct {
 	wscon          *websocket.Conn
 	id             int
-	messageChannel chan EditInstruction
+	messageChannel chan EditDocMessage
 }
 
 var document = `\documentclass{article}
@@ -71,7 +76,7 @@ func saveDocument(w http.ResponseWriter, r *http.Request) {
 	document = string(body)
 }
 
-func broadcastMessage(message EditInstruction, sender Client) {
+func broadcastMessage(message EditDocMessage, sender Client) {
 	log.Printf("Broadcasting to %d clients\n", len(connections))
 	for _, c := range connections {
 		if c.id == sender.id {
@@ -114,7 +119,7 @@ func acceptConnection(w http.ResponseWriter, r *http.Request) Client {
 	user := Client{
 		wscon:          c,
 		id:             currId,
-		messageChannel: make(chan EditInstruction, 10),
+		messageChannel: make(chan EditDocMessage, 10),
 	} // Bra bufferstorlek??? Ny forskningsfråga!?!?
 
 	go handleClientsMessages(user)
@@ -155,7 +160,7 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	go func() {
-		var newChange EditInstruction
+		var newChange EditDocMessage
 
 		for {
 			err := wsjson.Read(ctx, user.wscon, &newChange)
@@ -165,8 +170,7 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 				connections = removeConn(user)
 				return
 			}
-
-			log.Printf("Operation made: %s\n", newChange.operation)
+			log.Printf("chanes made")
 			broadcastMessage(newChange, user)
 
 		}
