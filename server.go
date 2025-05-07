@@ -142,6 +142,16 @@ func handleClientsMessages(client Client) {
 	}
 }
 
+func updateDocument(changes []Change) {
+
+	for _, change := range changes {
+
+		document = document[:change.From] + change.Text + document[change.To:]
+
+	}
+
+}
+
 func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	user := acceptConnection(w, r)
 	log.Printf("User connected with ID: %d\n", user.id)
@@ -160,18 +170,21 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	go func() {
-		var newChange EditDocMessage
+		var editDocMessage EditDocMessage
 
 		for {
-			err := wsjson.Read(ctx, user.wscon, &newChange)
+			err := wsjson.Read(ctx, user.wscon, &editDocMessage)
 
 			if err != nil {
 				log.Printf("Failed to read websocket message: %s", err)
 				connections = removeConn(user)
 				return
 			}
-			log.Printf("chanes made")
-			broadcastMessage(newChange, user)
+			log.Printf("Changes made: %v\n", editDocMessage)
+
+			updateDocument(editDocMessage.Changes)
+
+			broadcastMessage(editDocMessage, user)
 
 		}
 	}()
