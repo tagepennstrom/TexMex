@@ -18,10 +18,17 @@ import (
 const frontendPort = "5173"
 const filename = "document"
 
-type EditInstruction struct {
-	operation string
-	insertion string
-	uID       int
+type Change struct {
+	FromA   int    `json:"fromA"`   // Start index
+	ToA     int    `json:"toA"`     // Slut index
+	FromB   int    `json:"fromB"`   // Start index
+	ToB     int    `json:"toB"`     // Slut index
+	Text   string `json:"text"`   // Tillagd text
+	UserID int    `json:"userId"` // AnvändarID för CRDT
+}
+
+type EditDocMessage struct {
+	Changes []Change `json:"changes"`
 }
 
 type Client struct {
@@ -70,7 +77,7 @@ func saveDocument(w http.ResponseWriter, r *http.Request) {
 	document = string(body)
 }
 
-func broadcastMessage(ctx context.Context, message EditInstruction, sender Client) {
+func broadcastMessage(ctx context.Context, message EditDocMessage, sender Client) {
 
 	log.Printf("Broadcasting to %d clients\n", len(connections))
 
@@ -132,7 +139,7 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer user.wscon.CloseNow()
 
-	var newChange EditInstruction
+	var newChange EditDocMessage
 
 	for {
 		err := wsjson.Read(ctx, user.wscon, &newChange)
@@ -143,7 +150,7 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		log.Printf("Operation made: %s\n", newChange.operation)
+		// log.Printf("Operation made: %s\n", newChange.operation)
 		broadcastMessage(ctx, newChange, user)
 
 	}
