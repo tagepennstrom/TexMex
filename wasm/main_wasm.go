@@ -19,6 +19,19 @@ import (
 	"websocket-server/crdt"
 )
 
+func initUser(this js.Value, args []js.Value) any {
+	if len(args) != 1 {
+		println("Wrong number of arguments")
+		return nil
+	}
+	id := args[0].Int()
+	println("Initializing user ", id, " (main_wasm)")
+
+	crdt.SetUserID(id)
+
+	return nil
+}
+
 func updateDocumentWrap(this js.Value, args []js.Value) any {
 	if len(args) != 3 {
 		println("Wrong number of arguments")
@@ -49,6 +62,8 @@ func updateDocumentWrap(this js.Value, args []js.Value) any {
 
 func registerCallbacks() {
 	js.Global().Set("UpdateDocument", js.FuncOf(updateDocumentWrap))
+	js.Global().Set("SetUserID", js.FuncOf(initUser))
+
 	println("Function callbacks registered")
 }
 

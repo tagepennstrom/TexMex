@@ -123,7 +123,16 @@
 
         socket.addEventListener("message", (event) => {
             const message: Message = JSON.parse(event.data);
-            console.log(message);
+
+            if (message.id != undefined){
+                console.log("New user connected. ID: " + message.id);
+                SetUserID(message.id)
+
+            } else {
+                console.log(message);
+
+            }
+
             applyUpdate(editorView.state.doc.toString(), message.changes)
         });
 

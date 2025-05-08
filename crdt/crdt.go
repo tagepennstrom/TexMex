@@ -48,12 +48,22 @@ type UpdatedDocMessage struct {
 	CursorIndex int    `json:"cursorIndex"`
 }
 
+var uID int = -1
+
+func SetUserID(id int) {
+	uID = id
+	println("User ID set in CRDT as ID: ", uID)
+}
+
 func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedDocMessage {
 	doc := DocumentFromStr(document)
 	doc.SetCursorAt(cursorIndex)
+
+	if uID == -1 {
+		println("Error: User ID not initialized")
+	}
+
 	for _, change := range changes {
-		// TODO: give each user an ID
-		uID := 1
 
 		// Ta bort
 		if change.Text == "" {
