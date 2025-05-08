@@ -1,5 +1,5 @@
 import { get } from 'svelte/store';
-import { editorView, compileLatexStore } from "$lib/stores";
+import { editorView } from "$lib/stores";
 
 
 
@@ -82,22 +82,3 @@ export function insertNewline(){
         selection: { anchor: cursor + 9, head: cursor + 9 }
     });
 }
-
-
-export function compile() {
-    const view = get(editorView);
-    const compileLatex = get(compileLatexStore);
-
-    if (view && compileLatex) {
-        let content = view.state.doc.toString();
-
-        
-        compileLatex(content);
-    }
- }
-
-
-
-
-
-

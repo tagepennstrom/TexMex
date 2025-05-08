@@ -1,18 +1,41 @@
-<script>
-    let SavedProjects = 0;
+<script lang="ts">
+    import {onMount} from 'svelte'
+
+    type Project = {
+        name: string;
+        documents: Document[];
+    }
+    type Document = {
+        name: string;
+    }
+
+    let projects: Project[] = $state([]);
+
+    onMount(() => {
+        const serverUrl = `http://${location.hostname}:8080`;
+        fetch(`${serverUrl}/projects`)
+            .then(res => res.json())
+            .then((res: Project[]) => projects = res);
+    });
 
     function handleClick() {
         window.location.href = "/SavedProjects";
     }
+
 </script>
 
 <div class="MyProjects">
     <div class="projects">
-        {#if SavedProjects > 0}
-            <!-- Lägg till sätt att visa sparade projekt -->
-            <p>Gör nått som visar alla project</p>
-        {:else}
+        {#if projects.length === 0}
             <p>No saved projects</p>
+        {:else}
+            <ul>
+            {#each projects as project}
+                <li>
+                    <a href='/project/{project.name}/EditorArea'>{project.name}</a>
+                </li>
+            {/each}
+            </ul>
         {/if}
     </div>
     <div class="footer">
