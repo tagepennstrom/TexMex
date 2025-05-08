@@ -3,6 +3,11 @@
 För att kompilera:
 1. Gå till /wasm directory
 2. Kör: GOOS=js GOARCH=wasm go build -o ../frontend/src/wasm/main.wasm
+2.1 powershell: $env:GOOS="js"; $env:GOARCH="wasm"; go build -o ..\frontend\src\wasm\main.wasm
+2.2 cmd.exe:
+set GOOS=js
+set GOARCH=wasm
+go build -o ..\frontend\src\wasm\main.wasm
 
 **/
 
