@@ -34,18 +34,18 @@ type Change struct {
 	ToA   int    `json:"toA"`   // Slut index original document
 	FromB int    `json:"fromB"` // Start index new document
 	ToB   int    `json:"toB"`   // Slut index new document
-	Text string `json:"text"` // Tillagd text
+	Text  string `json:"text"`  // Tillagd text
 }
 
 type EditDocMessage struct {
-	Document string `json:"document"`
-	Changes  []Change `json:"changes"`
-	CursorIndex int `json:"cursorIndex"`
+	Document    string   `json:"document"`
+	Changes     []Change `json:"changes"`
+	CursorIndex int      `json:"cursorIndex"`
 }
 
 type UpdatedDocMessage struct {
-	Document string `json:"document"`
-	CursorIndex int `json:"cursorIndex"`
+	Document    string `json:"document"`
+	CursorIndex int    `json:"cursorIndex"`
 }
 
 func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedDocMessage {
@@ -54,25 +54,39 @@ func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedD
 	for _, change := range changes {
 		// TODO: give each user an ID
 		uID := 1
+
+		// Ta bort
 		if change.Text == "" {
 			for i := change.ToA; i > change.FromA; i-- {
 				doc.DeleteAtIndex(i)
 			}
-		} else {
+			// Lägg till
+		} else if change.FromA == change.ToA {
 			i := 0
 			for _, ch := range change.Text {
-				doc.LoadInsert(string(ch), change.FromB + i, uID)
+				doc.LoadInsert(string(ch), change.FromB+i, uID)
+				i++
+			}
+			// Select och byt ut
+		} else {
+			for i := change.ToA; i > change.FromA; i-- {
+				doc.DeleteAtIndex(i)
+			}
+
+			i := 0
+			for _, ch := range change.Text {
+				doc.LoadInsert(string(ch), change.FromB+i, uID)
 				i++
 			}
 		}
+
 	}
 
 	return UpdatedDocMessage{
-		Document: doc.ToString(),
+		Document:    doc.ToString(),
 		CursorIndex: doc.CursorIndex(),
 	}
 }
-
 
 func DocumentFromStr(str string) Document {
 	doc := NewDocument()
@@ -394,7 +408,7 @@ func (d *Document) LoadInsert(letter string, index int, uID int) {
 	d.Textcontent = Insertion(letter, location, d.Textcontent, uID)
 	if d.CursorIndex() == index {
 		d.CursorForward()
-	} 
+	}
 }
 
 func (d *Document) MoveCursor(index int) {
