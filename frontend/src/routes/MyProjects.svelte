@@ -29,9 +29,11 @@
         {#if projects.length === 0}
             <p>No saved projects</p>
         {:else}
+            <ul>
             {#each projects as project}
                 <li>{project.name}</li>
             {/each}
+            </ul>
         {/if}
     </div>
     <div class="footer">

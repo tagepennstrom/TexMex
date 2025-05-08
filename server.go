@@ -148,12 +148,10 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET  /projects", middleware(getProjects))
-	mux.HandleFunc("GET  /projects/{name}", middleware(getProject))
-	mux.HandleFunc("POST /projects/{name}", middleware(createProject))
-	mux.HandleFunc("GET  /projects/{projectName}/documents/{documentName}", middleware(getProjectDocument))
-	mux.HandleFunc("PUT  /projects/{projectName}/documents/{documentName}", middleware(saveProjectDocument))
-	mux.HandleFunc("GET  /projects/{name}/pdf", middleware(getProjectPdf))
+	mux.HandleFunc("/projects", middleware(getProjects))
+	mux.HandleFunc("/projects/{name}", middleware(projectHandler))
+	mux.HandleFunc("/projects/{projectName}/documents/{documentName}", middleware(projectDocumentHandler))
+	mux.HandleFunc("/projects/{name}/pdf", middleware(getProjectPdf))
 
 	mux.HandleFunc("/editDocWebsocket", editDocWebsocketHandler)
 

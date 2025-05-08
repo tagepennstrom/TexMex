@@ -1,15 +1,15 @@
 <script lang='ts'>
     import {basicSetup, EditorView} from "codemirror"
+    import { page } from '$app/state'
     import {onMount} from 'svelte'
     import {EditorState, Transaction} from "@codemirror/state"
     import {StreamLanguage,} from '@codemirror/language'
     import { stex } from "@codemirror/legacy-modes/mode/stex"
-    import { editorView as editorViewStore , compileLatexStore} from "$lib/stores";
+    import { editorView as editorViewStore } from "$lib/stores";
     import { autocompletion } from "@codemirror/autocomplete";
     import { myCompletions } from "$lib/completions";
 
 
-    let { compileLatex } = $props();
     let socket: WebSocket;
 
     let updateFromCode = $state(false);
@@ -87,8 +87,8 @@
         socket.send(JSON.stringify(message));
 
         const serverUrl = `http://${location.hostname}:8080`;
-        fetch(`${serverUrl}/saveDocument`, {
-            method: "POST",
+        fetch(`${serverUrl}/projects/${page.params.name}/documents/document.tex`, {
+            method: "PUT",
             headers: { "Content-Type": "text/plain" },
             body: updatedDocMessage.document,
         })
@@ -127,7 +127,7 @@
             applyUpdate(editorView.state.doc.toString(), message.changes)
         });
 
-        fetch(`${serverUrl}/document`)
+        fetch(`${serverUrl}/projects/${page.params.name}/documents/document.tex`)
             .then(res => res.text())
             .then(text => {
                 // Initialize CodeMirror editor
@@ -141,7 +141,6 @@
 
                 // Spara editorn i store för delning med Toolbar
                 editorViewStore.set(editorView);
-                compileLatexStore.set(compileLatex);
             });
     });
 </script>

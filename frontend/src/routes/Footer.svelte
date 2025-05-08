@@ -2,7 +2,7 @@
     let SavedProjects = 0;
 
     function handleClick() {
-        window.location.href = "/EditorArea";
+        window.location.href = "/project/my-amazing-project/EditorArea";
     }
 </script>
 

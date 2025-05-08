@@ -72,6 +72,17 @@ func getProjects(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func projectHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		getProject(w, r)
+	case "POST":
+		createProject(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
 func getProject(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	project, err := getProjectFromFilesystem(name)
@@ -110,6 +121,17 @@ func createProject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
+}
+
+func projectDocumentHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		getProjectDocument(w, r)
+	case "PUT":
+		saveProjectDocument(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 func getProjectDocument(w http.ResponseWriter, r *http.Request) {

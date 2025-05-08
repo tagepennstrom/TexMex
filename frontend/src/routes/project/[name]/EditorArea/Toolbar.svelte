@@ -1,6 +1,8 @@
 <script lang="ts">
-    import { insertBold, insertItalic, insertUnderline, compile, insertNewline } from '$lib/index';
+    import { insertBold, insertItalic, insertUnderline, insertNewline } from '$lib/index';
     import { onMount, onDestroy } from 'svelte';
+
+    let { compile } = $props()
 
     let handleKeydown: (event: KeyboardEvent) => void;
 
