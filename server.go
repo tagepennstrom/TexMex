@@ -3,12 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"net/http"
-	"os"
-	"os/exec"
 	"slices"
 
 	"github.com/coder/websocket"
@@ -16,13 +13,12 @@ import (
 )
 
 const frontendPort = "5173"
-const filename = "document"
 
 type Change struct {
-	FromA   int    `json:"fromA"`   // Start index
-	ToA     int    `json:"toA"`     // Slut index
-	FromB   int    `json:"fromB"`   // Start index
-	ToB     int    `json:"toB"`     // Slut index
+	FromA  int    `json:"fromA"`  // Start index
+	ToA    int    `json:"toA"`    // Slut index
+	FromB  int    `json:"fromB"`  // Start index
+	ToB    int    `json:"toB"`    // Slut index
 	Text   string `json:"text"`   // Tillagd text
 	UserID int    `json:"userId"` // AnvändarID för CRDT
 }
@@ -36,10 +32,6 @@ type Client struct {
 	id    int
 }
 
-var document = `\documentclass{article}
-\begin{document}
-	abcd
-\end{document}`
 var connections []Client
 var currId int = 0
 
@@ -52,29 +44,6 @@ func getLocalIP() (string, error) {
 
 	localAddr := conn.LocalAddr().(*net.UDPAddr)
 	return localAddr.IP.String(), nil
-}
-
-func getDocument(w http.ResponseWriter, r *http.Request) {
-	_, err := w.Write([]byte(document))
-	if err != nil {
-		errorMessage := fmt.Sprintf("Failed to write document: %s", err)
-		log.Println(errorMessage)
-		http.Error(w, errorMessage, http.StatusInternalServerError)
-	}
-}
-
-func saveDocument(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		errorMessage := fmt.Sprintf("Error reading request body: %s", err)
-		log.Println(errorMessage)
-		http.Error(w, errorMessage, http.StatusBadRequest)
-		return
-	}
-	r.Body.Close()
-
-	log.Println("Saving document")
-	document = string(body)
 }
 
 func broadcastMessage(ctx context.Context, message EditDocMessage, sender Client) {
@@ -156,52 +125,12 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func compileDocument(w http.ResponseWriter, r *http.Request) {
-	document, err := io.ReadAll(r.Body)
-
-	if err != nil {
-		errorMessage := fmt.Sprintf("Error reading request body: %s", err)
-		log.Println(errorMessage)
-		http.Error(w, errorMessage, http.StatusBadRequest)
-		return
-	}
-
-	r.Body.Close()
-	filenameLatex := fmt.Sprintf("%s.tex", filename)
-	const writeReadPermission = os.FileMode(0666)
-	err = os.WriteFile(filenameLatex, document, writeReadPermission)
-
-	if err != nil {
-		errorMessage := fmt.Sprintf("Error creating LaTeX file: %s", err)
-		log.Println(errorMessage)
-		http.Error(w, errorMessage, http.StatusInternalServerError)
-		return
-	}
-
-	cmd := exec.Command("pdflatex", "-interaction=nonstopmode", filenameLatex)
-	err = cmd.Run()
-	if err != nil {
-		errorMessage := fmt.Sprintf("Error compiling LaTeX file: %s", err)
-		log.Println(errorMessage)
-		http.Error(w, errorMessage, http.StatusInternalServerError)
-		return
-	}
-	fmt.Fprintf(w, `{"pdfUrl": "/pdf"}`)
-}
-
-func servePdf(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/pdf")
-	filenamePdf := fmt.Sprintf("%s.pdf", filename)
-	http.ServeFile(w, r, filenamePdf)
-
-}
-
 func middleware(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	ip, _ := getLocalIP()
 	frontendUrl := fmt.Sprintf("http://%s:%s", ip, frontendPort)
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Access-Control-Allow-Origin", frontendUrl)
-		w.Header().Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Add("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
 		w.Header().Add("Access-Control-Allow-Headers", "Content-Type")
 		log.Printf("%s %s\n", r.Method, r.RequestURI)
 		if r.Method == "OPTIONS" {
@@ -217,13 +146,17 @@ func main() {
 	serverAddress := fmt.Sprintf("%s:%s", ip, port)
 	log.Printf("Server running on http://%s/\n", serverAddress)
 
-	http.HandleFunc("/document", middleware(getDocument))
-	http.HandleFunc("/saveDocument", middleware(saveDocument))
-	http.HandleFunc("/compileDocument", middleware(compileDocument))
-	http.HandleFunc("/pdf", middleware(servePdf))
+	mux := http.NewServeMux()
 
-	http.HandleFunc("/editDocWebsocket", editDocWebsocketHandler)
+	mux.HandleFunc("GET  /projects", middleware(getProjects))
+	mux.HandleFunc("GET  /projects/{name}", middleware(getProject))
+	mux.HandleFunc("POST /projects/{name}", middleware(createProject))
+	mux.HandleFunc("GET  /projects/{projectName}/documents/{documentName}", middleware(getProjectDocument))
+	mux.HandleFunc("PUT  /projects/{projectName}/documents/{documentName}", middleware(saveProjectDocument))
+	mux.HandleFunc("GET  /projects/{name}/pdf", middleware(getProjectPdf))
 
-	err := http.ListenAndServe(serverAddress, nil)
+	mux.HandleFunc("/editDocWebsocket", editDocWebsocketHandler)
+
+	err := http.ListenAndServe(serverAddress, mux)
 	log.Println(err)
 }
