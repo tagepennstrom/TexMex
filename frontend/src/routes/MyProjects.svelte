@@ -31,7 +31,9 @@
         {:else}
             <ul>
             {#each projects as project}
-                <li>{project.name}</li>
+                <li>
+                    <a href='/project/{project.name}/EditorArea'>{project.name}</a>
+                </li>
             {/each}
             </ul>
         {/if}

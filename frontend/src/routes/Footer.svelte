@@ -1,8 +1,15 @@
 <script>
-    let SavedProjects = 0;
-
-    function handleClick() {
-        window.location.href = "/project/my-amazing-project/EditorArea";
+    async function handleClick() {
+        const serverUrl = `http://${location.hostname}:8080`;
+        const projectName = 'project-1';
+        const res = await fetch(`${serverUrl}/projects/${projectName}`, {
+            method: "POST",
+        });
+        if (!res.ok) {
+            console.error("Unable to create project:", await res.text());
+            return;
+        }
+        window.location.href = `/project/${projectName}/EditorArea`;
     }
 </script>
 

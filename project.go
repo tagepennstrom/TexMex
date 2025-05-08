@@ -116,7 +116,20 @@ func createProject(w http.ResponseWriter, r *http.Request) {
 	err := os.Mkdir(projectPath, os.FileMode(0775))
 	if err != nil {
 		log.Println(fmt.Sprintf("Unable to create project: %s", err))
-		http.Error(w, "Unable to create project", http.StatusBadRequest)
+		http.Error(w, "Unable to create project", http.StatusInternalServerError)
+		return
+	}
+
+	emptyLatexFile := `\documentclass{article}
+\begin{document}
+	hello world
+\end{document}`
+
+	err = os.WriteFile(projectPath+"/document.tex", []byte(emptyLatexFile), os.FileMode(0600))
+	if err != nil {
+		errorMessage := fmt.Sprintf("Unable to create initial LaTeX file: %s", err)
+		log.Println(errorMessage)
+		http.Error(w, errorMessage, http.StatusInternalServerError)
 		return
 	}
 
