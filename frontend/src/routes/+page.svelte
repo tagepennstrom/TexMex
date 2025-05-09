@@ -26,7 +26,7 @@
         display: flex;
         flex-direction: column;
         min-height: 100vh;
-        background-color: #e0f7fa;
+        background-color: rgb(250, 250, 250);
     }
 
     .contents{
