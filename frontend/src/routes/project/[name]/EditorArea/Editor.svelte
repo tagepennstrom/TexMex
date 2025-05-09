@@ -122,7 +122,7 @@
         socket = new WebSocket(`${serverUrl}/editDocWebsocket`);
 
         socket.addEventListener("message", (event) => {
-            const message: Message = JSON.parse(event.data);
+            const message = JSON.parse(event.data);
 
             if (message.id != undefined){
                 console.log("New user connected. ID: " + message.id);
@@ -130,10 +130,9 @@
 
             } else {
                 console.log(message);
-
+                applyUpdate(editorView.state.doc.toString(), message.changes)
             }
 
-            applyUpdate(editorView.state.doc.toString(), message.changes)
         });
 
         fetch(`${serverUrl}/projects/${page.params.name}/documents/document.tex`)
