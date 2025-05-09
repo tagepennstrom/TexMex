@@ -19,6 +19,17 @@ import (
 	"websocket-server/crdt"
 )
 
+func debugFeat(this js.Value, args []js.Value) any {
+	if len(args) != 0 {
+		println("Wrong number of arguments")
+		return nil
+	}
+
+	crdt.PrintDocument(true)
+
+	return nil
+}
+
 func initUser(this js.Value, args []js.Value) any {
 	if len(args) != 1 {
 		println("Wrong number of arguments")
@@ -63,6 +74,7 @@ func updateDocumentWrap(this js.Value, args []js.Value) any {
 func registerCallbacks() {
 	js.Global().Set("UpdateDocument", js.FuncOf(updateDocumentWrap))
 	js.Global().Set("SetUserID", js.FuncOf(initUser))
+	js.Global().Set("CRDebug", js.FuncOf(debugFeat))
 
 	println("Function callbacks registered")
 }

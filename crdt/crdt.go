@@ -8,6 +8,7 @@ import (
 type Document struct {
 	CursorPosition *Item
 	Textcontent    LinkedList
+	Active         bool
 }
 
 type LinkedList struct {
@@ -50,14 +51,34 @@ type UpdatedDocMessage struct {
 
 var uID int = -1
 
+var docu Document
+
 func SetUserID(id int) {
 	uID = id
 	println("User ID set in CRDT as ID: ", uID)
 }
 
+func PrintDocument(verbose bool) {
+	var result string
+	for current := docu.Textcontent.Head; current != nil; current = current.Next {
+		result += current.Letter
+		if verbose {
+			fmt.Println(" x ", current.Location.Coordinate, current.Letter)
+		}
+	}
+	println("Result:", result)
+
+}
+
 func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedDocMessage {
-	doc := DocumentFromStr(document)
-	doc.SetCursorAt(cursorIndex)
+
+	if !docu.Active {
+		println("Initializing document... (crdt.go)")
+		docu = DocumentFromStr(document)
+		docu.Active = true
+	}
+
+	docu.SetCursorAt(cursorIndex)
 
 	if uID == -1 {
 		println("Error: User ID not initialized")
@@ -68,24 +89,24 @@ func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedD
 		// Ta bort
 		if change.Text == "" {
 			for i := change.ToA; i > change.FromA; i-- {
-				doc.DeleteAtIndex(i)
+				docu.DeleteAtIndex(i)
 			}
 			// Lägg till
 		} else if change.FromA == change.ToA {
 			i := 0
 			for _, ch := range change.Text {
-				doc.LoadInsert(string(ch), change.FromB+i, uID)
+				docu.LoadInsert(string(ch), change.FromB+i, uID)
 				i++
 			}
 			// Select och byt ut
 		} else {
 			for i := change.ToA; i > change.FromA; i-- {
-				doc.DeleteAtIndex(i)
+				docu.DeleteAtIndex(i)
 			}
 
 			i := 0
 			for _, ch := range change.Text {
-				doc.LoadInsert(string(ch), change.FromB+i, uID)
+				docu.LoadInsert(string(ch), change.FromB+i, uID)
 				i++
 			}
 		}
@@ -93,8 +114,8 @@ func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedD
 	}
 
 	return UpdatedDocMessage{
-		Document:    doc.ToString(),
-		CursorIndex: doc.CursorIndex(),
+		Document:    docu.ToString(),
+		CursorIndex: docu.CursorIndex(),
 	}
 }
 
