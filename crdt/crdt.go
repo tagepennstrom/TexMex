@@ -1,6 +1,7 @@
 package crdt
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 )
@@ -49,9 +50,68 @@ type UpdatedDocMessage struct {
 	CursorIndex int    `json:"cursorIndex"`
 }
 
-var uID int = -1
+type CRDTNode struct {
+	Letter   string `json:"letter"`
+	Location CoordT `json:"location"`
+	ID       int    `json:"id"`
+}
 
+// *
+// Globala variabler
+// *
+
+var uID int = -1
 var docu Document
+
+// *
+// Snapshot state logik (CRDT -> JSON)
+// *
+
+func (ll *LinkedList) Snap() []CRDTNode {
+	var out []CRDTNode
+	for node := ll.Head; node != nil; node = node.Next {
+		out = append(out, CRDTNode{
+			Letter:   node.Letter,
+			Location: node.Location,
+			ID:       node.ID,
+		})
+	}
+	return out
+}
+
+func (d *Document) Snapshot() ([]byte, error) {
+	snapshot := struct {
+		Textcontent []CRDTNode `json:"textcontent"`
+	}{
+		Textcontent: d.Textcontent.Snap(),
+	}
+	return json.Marshal(snapshot)
+	// skickar som byte-kod så det inte blir långsamt med stora dokument
+}
+
+func LoadSnapshot(jsonStr string) string {
+
+	jsonBytes := []byte(jsonStr)
+
+	var toLoad struct {
+		Textcontent []CRDTNode
+	}
+
+	err := json.Unmarshal(jsonBytes, &toLoad)
+	if err != nil {
+		println("error when unmarshalling loaded snapshot (LoadSnapshot in crdt.go)")
+		panic(err)
+	}
+
+	loadedDoc := NewDocument()
+
+	for _, node := range toLoad.Textcontent {
+		newItem := Item{Letter: node.Letter, Location: node.Location, ID: node.ID}
+		loadedDoc.Textcontent.Append(&newItem)
+	}
+
+	return loadedDoc.ToString()
+}
 
 func SetUserID(id int) {
 	uID = id

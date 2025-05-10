@@ -53,6 +53,19 @@ func initDocument(this js.Value, args []js.Value) any {
 	return nil
 }
 
+func loadState(this js.Value, args []js.Value) any {
+	if len(args) != 1 {
+		println("Wrong number of arguments [ InitializeDocument() ]")
+		return nil
+	}
+
+	jsonString := args[0].String()
+
+	newDoc := crdt.LoadSnapshot(jsonString)
+
+	return newDoc
+}
+
 func updateDocumentWrap(this js.Value, args []js.Value) any {
 	if len(args) != 3 {
 		println("Wrong number of arguments")
@@ -86,6 +99,7 @@ func registerCallbacks() {
 	js.Global().Set("SetUserID", js.FuncOf(initUser))
 	js.Global().Set("CRDebug", js.FuncOf(debugFeat))
 	js.Global().Set("InitializeDocument", js.FuncOf(initDocument))
+	js.Global().Set("LoadState", js.FuncOf(loadState))
 
 	println("Function callbacks registered")
 }

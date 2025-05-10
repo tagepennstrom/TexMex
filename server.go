@@ -10,6 +10,8 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
+
+	"websocket-server/crdt"
 )
 
 const frontendPort = "5173"
@@ -30,9 +32,8 @@ type EditDocMessage struct {
 type Envelope struct {
 	Type       string         `json:"type"`                 // "operation", "stateRequest", "stateResponse"
 	EditDocMsg EditDocMessage `json:"editDocMsg,omitempty"` // changes
-	TargetID   int            `json:"targetId,omitempty"`   // for stateRequest/response
-	// State     []CRDTNode   `json:"state,omitempty"`     // for stateResponse
-	UserID int `json:"userId,omitempty"` // optional sender ID
+	ByteState  []byte         `json:"byteState,omitempty"`  // for stateResponse
+	UserID     int            `json:"userId,omitempty"`     // optional sender ID
 }
 
 type Client struct {
@@ -40,13 +41,10 @@ type Client struct {
 	id    int
 }
 
-type StateRequest struct {
-	Type     string `json:"type"`
-	TargetID int    `json:"targetId"`
-}
-
+// Globala variabler
 var connections []Client
 var currId int = 0
+var globalDocument crdt.Document
 
 func getLocalIP() (string, error) {
 	conn, err := net.Dial("udp", "12.34.56.78:90")
@@ -127,18 +125,6 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer user.wscon.CloseNow()
 
-	// fråga andra användare att skicka sina CRDTs
-	for _, peer := range connections {
-		if peer.id != user.id {
-			req := StateRequest{
-				Type:     "stateRequest",
-				TargetID: user.id,
-			}
-			wsjson.Write(ctx, peer.wscon, req)
-			break
-		}
-	}
-
 	var env Envelope
 
 	for {
@@ -157,24 +143,19 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 			break
 
 		case "stateRequest":
-			// hämta crdt state och skicka tillbaka
+			data, err := globalDocument.Snapshot()
+
+			if err != nil {
+				log.Printf("snapshot error: %v", err)
+				break
+			}
 
 			resp := Envelope{
-				Type:     "stateResponse",
-				TargetID: env.TargetID,
-				// och state
+				Type:      "stateResponse",
+				ByteState: data,
 			}
+
 			wsjson.Write(ctx, user.wscon, resp)
-
-			break
-
-		case "stateResponse":
-			for _, c := range connections {
-				if c.id == env.TargetID {
-					wsjson.Write(ctx, c.wscon, env)
-					break
-				}
-			}
 
 			break
 
@@ -199,6 +180,14 @@ func middleware(handlerFunc http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
+
+	// todo: det nedan är tillfälligt för att testa crdt synkning
+	// ***
+	filler := "Det här är ett document"
+	globalDocument = crdt.DocumentFromStr(filler)
+
+	// ***
+
 	const port = "8080"
 	ip, _ := getLocalIP()
 	serverAddress := fmt.Sprintf("%s:%s", ip, port)

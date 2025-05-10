@@ -139,27 +139,21 @@
                         type:     "stateRequest",
                         targetId: message.id
                     }));
-                    break;
+                    // todo: implementera nån wait function (promise?) och nån 
+                    //      timeout om den inte får tillbaka CRDT state inom x sekunder
 
-                
-                case "stateRequest":
-                    // "S have requested the state, I need to send your current state"
-                    console.log("This client has been asked to send its CRDT state")
-
-                    socket.send(JSON.stringify({
-                        type:     "stateResponse",
-                        targetId: message.targetId,
-                        // state:    CRDTBackend.serialize()
-                    }));
                     break;
 
                 case "stateResponse":
-                    // "This is the current state, apply it to your doc"
+                    const encodedState = message.byteState as string;
 
-                    if (message.targetId === uID) {
-                        // CRDTBackend.loadFromState(msg.state);
-                        InitializeDocument();
-                    }
+                    const jsonString = atob(encodedState);
+
+                    const loadedDocStr = LoadState(jsonString)
+                    
+                    editorView.dispatch({
+                        changes: { from: 0, to: editorView.state.doc.length, insert: loadedDocStr }
+                    });
                     break;
 
                 case "operation":
