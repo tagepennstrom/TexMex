@@ -114,7 +114,11 @@ func LoadSnapshot(jsonStr string) string {
 	docu = loadedDoc
 
 	docAsStr := docu.ToString()
+	docu.Textcontent.Length = len(docAsStr)
+
 	println("Final loaded doc:", docAsStr)
+
+	PrintDocument(true)
 
 	return docAsStr
 }
@@ -133,6 +137,7 @@ func PrintDocument(verbose bool) {
 		}
 	}
 	println("Result:", result)
+	println("Doc tail:", docu.Textcontent.Tail.Letter)
 
 }
 
@@ -144,14 +149,14 @@ func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedD
 		docu.Active = true
 	}
 
-	docu.SetCursorAt(cursorIndex)
+	// docu.SetCursorAt(cursorIndex)
 
 	if uID == -1 {
 		println("Error: User ID not initialized")
 	}
 
 	for _, change := range changes {
-
+		println("chtxt:", change.Text, "frB:", change.FromB, "  (crdt.go)")
 		// Ta bort
 		if change.Text == "" {
 			for i := change.ToA; i > change.FromA; i-- {
@@ -178,6 +183,8 @@ func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedD
 		}
 
 	}
+
+	docu.PrintDocument(true)
 
 	return UpdatedDocMessage{
 		Document:    docu.ToString(),
@@ -424,6 +431,7 @@ func GetAppendCoordinate(prevCoord []int, uID int) CoordT {
 
 func (d *Document) findInsertCoord(uID int) CoordT {
 	cursorPosCoordinate := d.CursorPosition.Location // TODO REWRITE, det här är oläsbart
+
 	// Case 4
 	if d.CursorPosition.Next == nil {
 		return GetAppendCoordinate(cursorPosCoordinate.Coordinate, uID)
@@ -463,23 +471,27 @@ func (d *Document) CursorBackwards() {
 }
 
 func (d *Document) IndexToCoordinate(index int) (Item, bool) {
+
 	docLength := d.Textcontent.Length
 	var newPosition Item
 	var atEnd bool = false
 
+	println("i:", index, "doclen:", docLength, " (indextocoordinate)")
+
 	if index >= docLength {
 		index = docLength
 		atEnd = true
+		return *d.Textcontent.Tail, true
 	}
 
 	if index < 0 {
-		println("Error. Can't move cursor out of bounds")
+		println("Error. Can't move cursor out of bounds (IndexToCoordinate)")
 		os.Exit(1)
 
 	} else {
 
 		current := d.Textcontent.Head
-		for i := 0; i < index; i++ {
+		for i := 0; i < index+1; i++ {
 			current = current.Next
 		}
 
@@ -490,6 +502,8 @@ func (d *Document) IndexToCoordinate(index int) (Item, bool) {
 
 func (d *Document) LoadInsert(letter string, index int, uID int) {
 	prevItem, caseFour := d.IndexToCoordinate(index)
+	println("pr-itm:", prevItem.Letter, "c4?:", caseFour, " (LoadInsert)")
+
 	var location CoordT
 	if caseFour {
 		location = GetAppendCoordinate(prevItem.Location.Coordinate, uID)

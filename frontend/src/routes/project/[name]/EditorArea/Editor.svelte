@@ -95,8 +95,6 @@
             editDocMsg: updatedDocMessage
         }
 
-        
-
         console.log("Sending message:", message);
 
         socket.send(JSON.stringify(env));

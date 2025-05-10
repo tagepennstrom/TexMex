@@ -190,7 +190,7 @@ func main() {
 
 	// todo: det nedan är tillfälligt för att testa crdt synkning
 	// ***
-	filler := "Ett dokument. Med begin{text}"
+	filler := "ABC"
 	globalDocument = crdt.DocumentFromStr(filler)
 
 	// ***
