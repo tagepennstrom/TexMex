@@ -124,13 +124,30 @@
         socket.addEventListener("message", (event) => {
             const message = JSON.parse(event.data);
 
+            switch (message.type) {
+
+                case "user_connected":
+                    console.log("New user connected. ID: " + message.id);
+                    SetUserID(message.id)
+                    InitializeDocument()
+                    break;
+
+                case "send_CRDT_state":
+                    break;
+
+                case "operation":
+                    console.log(message);
+                    applyUpdate(editorView.state.doc.toString(), message.changes)
+                    break;
+
+            }
+
+
             if (message.id != undefined){
-                console.log("New user connected. ID: " + message.id);
-                SetUserID(message.id)
+                
 
             } else {
-                console.log(message);
-                applyUpdate(editorView.state.doc.toString(), message.changes)
+                
             }
 
         });

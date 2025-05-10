@@ -27,9 +27,23 @@ type EditDocMessage struct {
 	Changes []Change `json:"changes"`
 }
 
+type Envelope struct {
+	Type       string         `json:"type"`               // "operation", "stateRequest", "stateResponse"
+	DocID      string         `json:"docId,omitempty"`    // which document
+	EditDocMsg EditDocMessage `json:"changes,omitempty"`  // for Type=="operation"
+	TargetID   int            `json:"targetId,omitempty"` // for stateRequest/response
+	// State     []CRDTNode   `json:"state,omitempty"`     // for stateResponse
+	UserID int `json:"userId,omitempty"` // optional sender ID
+}
+
 type Client struct {
 	wscon *websocket.Conn
 	id    int
+}
+
+type StateRequest struct {
+	Type     string `json:"type"`
+	TargetID int    `json:"targetId"`
 }
 
 var connections []Client
@@ -108,10 +122,22 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer user.wscon.CloseNow()
 
-	var newChange EditDocMessage
+	// fråga andra användare att skicka sina CRDTs
+	for _, peer := range connections {
+		if peer.id != user.id {
+			req := StateRequest{
+				Type:     "stateRequest",
+				TargetID: user.id,
+			}
+			wsjson.Write(ctx, peer.wscon, req)
+			break
+		}
+	}
+
+	var env Envelope
 
 	for {
-		err := wsjson.Read(ctx, user.wscon, &newChange)
+		err := wsjson.Read(ctx, user.wscon, &env)
 
 		if err != nil {
 			log.Printf("Failed to read websocket message: %s", err)
@@ -119,8 +145,36 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// log.Printf("Operation made: %s\n", newChange.operation)
-		broadcastMessage(ctx, newChange, user)
+		switch env.Type {
+
+		case "operation":
+			broadcastMessage(ctx, env.EditDocMsg, user)
+			break
+
+		case "stateRequest":
+			// hämta crdt state och skicka tillbaka
+
+			resp := Envelope{
+				Type:     "stateResponse",
+				DocID:    env.DocID,
+				TargetID: env.TargetID,
+				// och state
+			}
+			wsjson.Write(ctx, user.wscon, resp)
+
+			break
+
+		case "stateResponse":
+			for _, c := range connections {
+				if c.id == env.TargetID {
+					wsjson.Write(ctx, c.wscon, env)
+					break
+				}
+			}
+
+			break
+
+		}
 
 	}
 }
