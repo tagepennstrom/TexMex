@@ -108,7 +108,7 @@ func LoadSnapshot(jsonStr string) string {
 	for _, node := range toLoad.Textcontent {
 		newItem := Item{Letter: node.Letter, Location: node.Location, ID: node.ID}
 		loadedDoc.Textcontent.Append(&newItem)
-		println("LD:", node.Letter, "appended.")
+		// println("LD:", node.Letter, "appended.")
 	}
 	loadedDoc.Active = true
 	docu = loadedDoc

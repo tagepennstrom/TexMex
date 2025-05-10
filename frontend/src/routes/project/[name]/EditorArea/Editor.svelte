@@ -84,8 +84,22 @@
             changes: changes,
             cursorIndex: cursorIndex,
         };
+
+        type Envelope = {
+            type: string          
+            editDocMsg: UpdatedDocMessage
+        }
+
+        const env: Envelope = {
+            type: "operation",
+            editDocMsg: updatedDocMessage
+        }
+
+        
+
         console.log("Sending message:", message);
-        socket.send(JSON.stringify(message));
+
+        socket.send(JSON.stringify(env));
 
         const serverUrl = `http://${location.hostname}:8080`;
         fetch(`${serverUrl}/projects/${page.params.name}/documents/document.tex`, {
@@ -127,7 +141,7 @@
 
         socket.addEventListener("message", (event) => {
             const message = JSON.parse(event.data);
-            console.log("hello")
+            console.log("hello this is type:", message.type)
             switch (message.type) {
 
                 case "user_connected":
@@ -145,7 +159,6 @@
                     break;
 
                 case "stateResponse":
-                    console.log("STATE RESPONSE")
                     updateFromCode = true;
                     const encodedState = message.byteState as string;
 
@@ -174,7 +187,7 @@
                     
 
                 case "operation":
-                    console.log(message);
+                    console.log(message.editDocMsg);
 
                     let changes = message.editDocMsg.changes
                     applyUpdate(editorView.state.doc.toString(), changes)

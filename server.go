@@ -139,6 +139,7 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		switch env.Type {
 
 		case "operation":
+
 			println("operation case (server.go)")
 			broadcastMessage(ctx, env.EditDocMsg, user)
 			break
