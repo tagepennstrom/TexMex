@@ -127,7 +127,7 @@
 
         socket.addEventListener("message", (event) => {
             const message = JSON.parse(event.data);
-
+            console.log("hello")
             switch (message.type) {
 
                 case "user_connected":
@@ -145,19 +145,31 @@
                     break;
 
                 case "stateResponse":
-                    updateFromCode = false;
+                    console.log("STATE RESPONSE")
+                    updateFromCode = true;
                     const encodedState = message.byteState as string;
 
                     const jsonString = atob(encodedState);
-
                     const loadedDocStr = LoadState(jsonString)
 
+                    console.log("Recieved doc:", loadedDocStr)
+                    console.log("Dispatched text to frontend.")
+
+                    const cursorPos = loadedDocStr.length // onödigt?
+
                     editorView.dispatch({
-                        changes: { from: 0, to: editorView.state.doc.length, insert: loadedDocStr }
-                    });
+                                changes: {
+                                    from: 0,
+                                    to: editorView.state.doc.length,
+                                    insert: loadedDocStr,
+                                },
+                                selection: {
+                                    anchor: cursorPos
+                                },
+                            });
 
-                    updateFromCode = true;
-
+                    updateFromCode = false;
+                    
                     break;
                     
 

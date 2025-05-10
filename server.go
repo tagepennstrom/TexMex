@@ -139,10 +139,13 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		switch env.Type {
 
 		case "operation":
+			println("operation case (server.go)")
 			broadcastMessage(ctx, env.EditDocMsg, user)
 			break
 
 		case "stateRequest":
+			println("Global CRDT state is:", globalDocument.ToString())
+
 			data, err := globalDocument.Snapshot()
 
 			if err != nil {
@@ -156,9 +159,12 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			wsjson.Write(ctx, user.wscon, resp)
-
+			println("Request sent")
 			break
 
+		default:
+			println("Error. No case for switch statment. (server.go)")
+			break
 		}
 
 	}
@@ -183,7 +189,7 @@ func main() {
 
 	// todo: det nedan är tillfälligt för att testa crdt synkning
 	// ***
-	filler := "Ett dokument. \begin{text}"
+	filler := "Ett dokument. Med begin{text}"
 	globalDocument = crdt.DocumentFromStr(filler)
 
 	// ***

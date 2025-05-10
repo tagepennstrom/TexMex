@@ -112,7 +112,11 @@ func LoadSnapshot(jsonStr string) string {
 	}
 	loadedDoc.Active = true
 	docu = loadedDoc
-	return loadedDoc.ToString()
+
+	docAsStr := docu.ToString()
+	println("Final loaded doc:", docAsStr)
+
+	return docAsStr
 }
 
 func SetUserID(id int) {
