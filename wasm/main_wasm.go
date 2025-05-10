@@ -43,6 +43,17 @@ func initUser(this js.Value, args []js.Value) any {
 	return nil
 }
 
+func initDocument(this js.Value, args []js.Value) any {
+	if len(args) != 1 {
+		println("Wrong number of arguments")
+		return nil
+	}
+
+	InitializeDocument()
+
+	return nil
+}
+
 func updateDocumentWrap(this js.Value, args []js.Value) any {
 	if len(args) != 3 {
 		println("Wrong number of arguments")

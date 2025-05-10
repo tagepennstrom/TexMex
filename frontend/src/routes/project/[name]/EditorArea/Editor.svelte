@@ -94,6 +94,25 @@
         })
     }
 
+
+    // ta emot crdt
+    async function initDocument(){
+        const message: Message = {
+            document: document,
+            changes: changes,
+            cursorIndex: cursorIndex,
+        };
+
+        socket.send(JSON.stringify(message))
+    }
+
+    // skicka crdt
+    function sendCrdtState(){
+
+    }
+
+
+
     const BlockLocalChanges = EditorState.transactionFilter.of(tr => {
         if (tr.docChanged && !updateFromCode) {
             sendChangesToCrdt(tr);
@@ -129,10 +148,39 @@
                 case "user_connected":
                     console.log("New user connected. ID: " + message.id);
                     SetUserID(message.id)
-                    InitializeDocument()
+                    initDocument()
                     break;
 
+                
+                case "stateRequest":
+                    socket.send(JSON.stringify({
+                        type:     "stateResponse",
+                        docId:    message.docId,
+                        targetId: message.targetId,
+                        // state:    CRDTBackend.serialize()
+                    }));
+                    break;
+
+                case "stateResponse":
+                    if (message.targetId === myUserId) {
+                        // CRDTBackend.loadFromState(msg.state);
+                        InitializeDocument();
+                    }
+                    break;
+
+
+                // om en annan klient frågar om CRDT init
                 case "send_CRDT_state":
+
+                    // gatherCRDTState()
+
+                    const CRDTState: Message = {
+                        document: document,
+                        changes: changes,
+                        cursorIndex: cursorIndex,
+                    };
+
+                    socket.send(JSON.stringify(CRDTState)) // todo hantera i server.go
                     break;
 
                 case "operation":

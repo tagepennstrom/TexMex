@@ -58,6 +58,10 @@ func SetUserID(id int) {
 	println("User ID set in CRDT as ID: ", uID)
 }
 
+func InitializeDocument() {
+
+}
+
 func PrintDocument(verbose bool) {
 	var result string
 	for current := docu.Textcontent.Head; current != nil; current = current.Next {
