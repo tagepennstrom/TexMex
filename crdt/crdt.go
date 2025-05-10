@@ -108,18 +108,16 @@ func LoadSnapshot(jsonStr string) string {
 	for _, node := range toLoad.Textcontent {
 		newItem := Item{Letter: node.Letter, Location: node.Location, ID: node.ID}
 		loadedDoc.Textcontent.Append(&newItem)
+		println("LD:", node.Letter, "appended.")
 	}
-
+	loadedDoc.Active = true
+	docu = loadedDoc
 	return loadedDoc.ToString()
 }
 
 func SetUserID(id int) {
 	uID = id
 	println("User ID set in CRDT as ID: ", uID)
-}
-
-func InitializeDocument() {
-
 }
 
 func PrintDocument(verbose bool) {
@@ -270,7 +268,8 @@ func CompareIndexes(c1 CoordT, c2 CoordT) bool {
 		} else {
 			fmt.Errorf("Coordinates are identical")
 			println("Error: Coordinates can't have the same size and ID. This should not happen!") // Har fått det felet
-			os.Exit(1)
+			fmt.Println(c1.Coordinate, "+", c1.ID, "vs", c2.Coordinate, "+", c2.ID)
+			//os.Exit(1)
 		}
 
 	}

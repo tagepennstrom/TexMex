@@ -145,19 +145,25 @@
                     break;
 
                 case "stateResponse":
+                    updateFromCode = false;
                     const encodedState = message.byteState as string;
 
                     const jsonString = atob(encodedState);
 
                     const loadedDocStr = LoadState(jsonString)
-                    
+
                     editorView.dispatch({
                         changes: { from: 0, to: editorView.state.doc.length, insert: loadedDocStr }
                     });
+
+                    updateFromCode = true;
+
                     break;
+                    
 
                 case "operation":
                     console.log(message);
+
                     let changes = message.editDocMsg.changes
                     applyUpdate(editorView.state.doc.toString(), changes)
                     break;

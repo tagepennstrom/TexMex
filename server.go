@@ -183,7 +183,7 @@ func main() {
 
 	// todo: det nedan är tillfälligt för att testa crdt synkning
 	// ***
-	filler := "Det här är ett document"
+	filler := "Ett dokument. \begin{text}"
 	globalDocument = crdt.DocumentFromStr(filler)
 
 	// ***
