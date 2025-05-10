@@ -21,7 +21,7 @@ import (
 
 func debugFeat(this js.Value, args []js.Value) any {
 	if len(args) != 0 {
-		println("Wrong number of arguments")
+		println("Wrong number of arguments [ CRDebug() ]")
 		return nil
 	}
 
@@ -32,7 +32,7 @@ func debugFeat(this js.Value, args []js.Value) any {
 
 func initUser(this js.Value, args []js.Value) any {
 	if len(args) != 1 {
-		println("Wrong number of arguments")
+		println("Wrong number of arguments [ SetUserID() ]")
 		return nil
 	}
 	id := args[0].Int()
@@ -44,13 +44,12 @@ func initUser(this js.Value, args []js.Value) any {
 }
 
 func initDocument(this js.Value, args []js.Value) any {
-	if len(args) != 1 {
-		println("Wrong number of arguments")
+	if len(args) != 0 {
+		println("Wrong number of arguments [ InitializeDocument() ]")
 		return nil
 	}
 
-	InitializeDocument()
-
+	println("Init document (main_wasm.go)")
 	return nil
 }
 
@@ -86,6 +85,7 @@ func registerCallbacks() {
 	js.Global().Set("UpdateDocument", js.FuncOf(updateDocumentWrap))
 	js.Global().Set("SetUserID", js.FuncOf(initUser))
 	js.Global().Set("CRDebug", js.FuncOf(debugFeat))
+	js.Global().Set("InitializeDocument", js.FuncOf(initDocument))
 
 	println("Function callbacks registered")
 }

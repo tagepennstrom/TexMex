@@ -17,7 +17,8 @@
     let editor: HTMLElement;
     let editorView: EditorView;
 
-    
+    let uID: number; // saved uID
+
     type Change = {
         fromA: number;   // Start index
         toA: number;     // Slut index
@@ -95,22 +96,6 @@
     }
 
 
-    // ta emot crdt
-    async function initDocument(){
-        const message: Message = {
-            document: document,
-            changes: changes,
-            cursorIndex: cursorIndex,
-        };
-
-        socket.send(JSON.stringify(message))
-    }
-
-    // skicka crdt
-    function sendCrdtState(){
-
-    }
-
 
 
     const BlockLocalChanges = EditorState.transactionFilter.of(tr => {
@@ -148,44 +133,46 @@
                 case "user_connected":
                     console.log("New user connected. ID: " + message.id);
                     SetUserID(message.id)
-                    initDocument()
+                    uID = message.id
+
+                    socket.send(JSON.stringify({
+                        type:     "stateRequest",
+                        targetId: message.id
+                    }));
                     break;
 
                 
                 case "stateRequest":
+                    // "S have requested the state, I need to send your current state"
+                    console.log("This client has been asked to send its CRDT state")
+
                     socket.send(JSON.stringify({
                         type:     "stateResponse",
-                        docId:    message.docId,
                         targetId: message.targetId,
                         // state:    CRDTBackend.serialize()
                     }));
                     break;
 
                 case "stateResponse":
-                    if (message.targetId === myUserId) {
+                    // "This is the current state, apply it to your doc"
+
+                    if (message.targetId === uID) {
                         // CRDTBackend.loadFromState(msg.state);
                         InitializeDocument();
                     }
                     break;
 
-
-                // om en annan klient frågar om CRDT init
-                case "send_CRDT_state":
-
-                    // gatherCRDTState()
-
-                    const CRDTState: Message = {
-                        document: document,
-                        changes: changes,
-                        cursorIndex: cursorIndex,
-                    };
-
-                    socket.send(JSON.stringify(CRDTState)) // todo hantera i server.go
-                    break;
-
                 case "operation":
                     console.log(message);
-                    applyUpdate(editorView.state.doc.toString(), message.changes)
+                    let changes = message.editDocMsg.changes
+                    applyUpdate(editorView.state.doc.toString(), changes)
+                    break;
+
+
+                default:
+                    console.log("Error: No switch-case handler found for message.");
+                    console.log(message)
+
                     break;
 
             }

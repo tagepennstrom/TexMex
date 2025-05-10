@@ -28,10 +28,9 @@ type EditDocMessage struct {
 }
 
 type Envelope struct {
-	Type       string         `json:"type"`               // "operation", "stateRequest", "stateResponse"
-	DocID      string         `json:"docId,omitempty"`    // which document
-	EditDocMsg EditDocMessage `json:"changes,omitempty"`  // for Type=="operation"
-	TargetID   int            `json:"targetId,omitempty"` // for stateRequest/response
+	Type       string         `json:"type"`                 // "operation", "stateRequest", "stateResponse"
+	EditDocMsg EditDocMessage `json:"editDocMsg,omitempty"` // changes
+	TargetID   int            `json:"targetId,omitempty"`   // for stateRequest/response
 	// State     []CRDTNode   `json:"state,omitempty"`     // for stateResponse
 	UserID int `json:"userId,omitempty"` // optional sender ID
 }
@@ -68,7 +67,12 @@ func broadcastMessage(ctx context.Context, message EditDocMessage, sender Client
 		if c.id == sender.id {
 			continue
 		}
-		err := wsjson.Write(ctx, c.wscon, message)
+		resp := Envelope{
+			Type:       "operation",
+			EditDocMsg: message,
+		}
+
+		err := wsjson.Write(ctx, c.wscon, resp)
 
 		if err != nil {
 			log.Printf("Failed to write websocket message: %s", err)
@@ -109,8 +113,9 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	connections = append(connections, user)
 
 	initialMessage := struct {
-		ID int `json:"id"`
-	}{ID: user.id}
+		ID   int    `json:"id"`
+		Type string `json:"type"`
+	}{ID: user.id, Type: "user_connected"}
 
 	// Send the ID to the client (use wsjson.Write to send a JSON message)
 	ctx := context.Background()
@@ -156,7 +161,6 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 
 			resp := Envelope{
 				Type:     "stateResponse",
-				DocID:    env.DocID,
 				TargetID: env.TargetID,
 				// och state
 			}
