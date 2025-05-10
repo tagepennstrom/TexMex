@@ -17,7 +17,8 @@
     let editor: HTMLElement;
     let editorView: EditorView;
 
-    
+    let uID: number; // saved uID
+
     type Change = {
         fromA: number;   // Start index
         toA: number;     // Slut index
@@ -83,8 +84,20 @@
             changes: changes,
             cursorIndex: cursorIndex,
         };
+
+        type Envelope = {
+            type: string          
+            editDocMsg: UpdatedDocMessage
+        }
+
+        const env: Envelope = {
+            type: "operation",
+            editDocMsg: updatedDocMessage
+        }
+
         console.log("Sending message:", message);
-        socket.send(JSON.stringify(message));
+
+        socket.send(JSON.stringify(env));
 
         const serverUrl = `http://${location.hostname}:8080`;
         fetch(`${serverUrl}/projects/${page.params.name}/documents/document.tex`, {
@@ -93,6 +106,9 @@
             body: updatedDocMessage.document,
         })
     }
+
+
+
 
     const BlockLocalChanges = EditorState.transactionFilter.of(tr => {
         if (tr.docChanged && !updateFromCode) {
@@ -123,14 +139,73 @@
 
         socket.addEventListener("message", (event) => {
             const message = JSON.parse(event.data);
+            console.log("hello this is type:", message.type)
+            switch (message.type) {
+
+                case "user_connected":
+                    console.log("New user connected. ID: " + message.id);
+                    SetUserID(message.id)
+                    uID = message.id
+
+                    socket.send(JSON.stringify({
+                        type:     "stateRequest",
+                        targetId: message.id
+                    }));
+                    // todo: implementera nån wait function (promise?) och nån 
+                    //      timeout om den inte får tillbaka CRDT state inom x sekunder
+
+                    break;
+
+                case "stateResponse":
+                    updateFromCode = true;
+                    const encodedState = message.byteState as string;
+
+                    const jsonString = atob(encodedState);
+                    const loadedDocStr = LoadState(jsonString)
+
+                    console.log("Recieved doc:", loadedDocStr)
+                    console.log("Dispatched text to frontend.")
+
+                    const cursorPos = loadedDocStr.length // onödigt?
+
+                    editorView.dispatch({
+                                changes: {
+                                    from: 0,
+                                    to: editorView.state.doc.length,
+                                    insert: loadedDocStr,
+                                },
+                                selection: {
+                                    anchor: cursorPos
+                                },
+                            });
+
+                    updateFromCode = false;
+                    
+                    break;
+                    
+
+                case "operation":
+                    console.log(message.editDocMsg);
+
+                    let changes = message.editDocMsg.changes
+                    applyUpdate(editorView.state.doc.toString(), changes)
+                    break;
+
+
+                default:
+                    console.log("Error: No switch-case handler found for message.");
+                    console.log(message)
+
+                    break;
+
+            }
+
 
             if (message.id != undefined){
-                console.log("New user connected. ID: " + message.id);
-                SetUserID(message.id)
+                
 
             } else {
-                console.log(message);
-                applyUpdate(editorView.state.doc.toString(), message.changes)
+                
             }
 
         });

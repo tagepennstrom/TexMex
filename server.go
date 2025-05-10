@@ -10,6 +10,8 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
+
+	"websocket-server/crdt"
 )
 
 const frontendPort = "5173"
@@ -27,13 +29,22 @@ type EditDocMessage struct {
 	Changes []Change `json:"changes"`
 }
 
+type Envelope struct {
+	Type       string         `json:"type"`                 // "operation", "stateRequest", "stateResponse"
+	EditDocMsg EditDocMessage `json:"editDocMsg,omitempty"` // changes
+	ByteState  []byte         `json:"byteState,omitempty"`  // for stateResponse
+	UserID     int            `json:"userId,omitempty"`     // optional sender ID
+}
+
 type Client struct {
 	wscon *websocket.Conn
 	id    int
 }
 
+// Globala variabler
 var connections []Client
 var currId int = 0
+var globalDocument crdt.Document
 
 func getLocalIP() (string, error) {
 	conn, err := net.Dial("udp", "12.34.56.78:90")
@@ -54,7 +65,12 @@ func broadcastMessage(ctx context.Context, message EditDocMessage, sender Client
 		if c.id == sender.id {
 			continue
 		}
-		err := wsjson.Write(ctx, c.wscon, message)
+		resp := Envelope{
+			Type:       "operation",
+			EditDocMsg: message,
+		}
+
+		err := wsjson.Write(ctx, c.wscon, resp)
 
 		if err != nil {
 			log.Printf("Failed to write websocket message: %s", err)
@@ -95,8 +111,9 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	connections = append(connections, user)
 
 	initialMessage := struct {
-		ID int `json:"id"`
-	}{ID: user.id}
+		ID   int    `json:"id"`
+		Type string `json:"type"`
+	}{ID: user.id, Type: "user_connected"}
 
 	// Send the ID to the client (use wsjson.Write to send a JSON message)
 	ctx := context.Background()
@@ -108,10 +125,10 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer user.wscon.CloseNow()
 
-	var newChange EditDocMessage
+	var env Envelope
 
 	for {
-		err := wsjson.Read(ctx, user.wscon, &newChange)
+		err := wsjson.Read(ctx, user.wscon, &env)
 
 		if err != nil {
 			log.Printf("Failed to read websocket message: %s", err)
@@ -119,8 +136,37 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// log.Printf("Operation made: %s\n", newChange.operation)
-		broadcastMessage(ctx, newChange, user)
+		switch env.Type {
+
+		case "operation":
+
+			println("operation case (server.go)")
+			broadcastMessage(ctx, env.EditDocMsg, user)
+			break
+
+		case "stateRequest":
+			println("Global CRDT state is:", globalDocument.ToString())
+
+			data, err := globalDocument.Snapshot()
+
+			if err != nil {
+				log.Printf("snapshot error: %v", err)
+				break
+			}
+
+			resp := Envelope{
+				Type:      "stateResponse",
+				ByteState: data,
+			}
+
+			wsjson.Write(ctx, user.wscon, resp)
+			println("Request sent")
+			break
+
+		default:
+			println("Error. No case for switch statment. (server.go)")
+			break
+		}
 
 	}
 }
@@ -141,6 +187,14 @@ func middleware(handlerFunc http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
+
+	// todo: det nedan är tillfälligt för att testa crdt synkning
+	// ***
+	filler := "ABC"
+	globalDocument = crdt.DocumentFromStr(filler)
+
+	// ***
+
 	const port = "8080"
 	ip, _ := getLocalIP()
 	serverAddress := fmt.Sprintf("%s:%s", ip, port)

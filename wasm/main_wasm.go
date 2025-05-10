@@ -19,9 +19,20 @@ import (
 	"websocket-server/crdt"
 )
 
+func debugFeat(this js.Value, args []js.Value) any {
+	if len(args) != 0 {
+		println("Wrong number of arguments [ CRDebug() ]")
+		return nil
+	}
+
+	crdt.PrintDocument(true)
+
+	return nil
+}
+
 func initUser(this js.Value, args []js.Value) any {
 	if len(args) != 1 {
-		println("Wrong number of arguments")
+		println("Wrong number of arguments [ SetUserID() ]")
 		return nil
 	}
 	id := args[0].Int()
@@ -30,6 +41,29 @@ func initUser(this js.Value, args []js.Value) any {
 	crdt.SetUserID(id)
 
 	return nil
+}
+
+func initDocument(this js.Value, args []js.Value) any {
+	if len(args) != 0 {
+		println("Wrong number of arguments [ InitializeDocument() ]")
+		return nil
+	}
+
+	println("Init document (main_wasm.go)")
+	return nil
+}
+
+func loadState(this js.Value, args []js.Value) any {
+	if len(args) != 1 {
+		println("Wrong number of arguments [ InitializeDocument() ]")
+		return nil
+	}
+
+	jsonString := args[0].String()
+
+	newDoc := crdt.LoadSnapshot(jsonString)
+
+	return newDoc
 }
 
 func updateDocumentWrap(this js.Value, args []js.Value) any {
@@ -63,6 +97,9 @@ func updateDocumentWrap(this js.Value, args []js.Value) any {
 func registerCallbacks() {
 	js.Global().Set("UpdateDocument", js.FuncOf(updateDocumentWrap))
 	js.Global().Set("SetUserID", js.FuncOf(initUser))
+	js.Global().Set("CRDebug", js.FuncOf(debugFeat))
+	js.Global().Set("InitializeDocument", js.FuncOf(initDocument))
+	js.Global().Set("LoadState", js.FuncOf(loadState))
 
 	println("Function callbacks registered")
 }

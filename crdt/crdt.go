@@ -1,6 +1,7 @@
 package crdt
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 )
@@ -8,6 +9,7 @@ import (
 type Document struct {
 	CursorPosition *Item
 	Textcontent    LinkedList
+	Active         bool
 }
 
 type LinkedList struct {
@@ -48,53 +50,145 @@ type UpdatedDocMessage struct {
 	CursorIndex int    `json:"cursorIndex"`
 }
 
+type CRDTNode struct {
+	Letter   string `json:"letter"`
+	Location CoordT `json:"location"`
+	ID       int    `json:"id"`
+}
+
+// *
+// Globala variabler
+// *
+
 var uID int = -1
+var docu Document
+
+// *
+// Snapshot state logik (CRDT -> JSON)
+// *
+
+func (ll *LinkedList) Snap() []CRDTNode {
+	var out []CRDTNode
+	for node := ll.Head; node != nil; node = node.Next {
+		out = append(out, CRDTNode{
+			Letter:   node.Letter,
+			Location: node.Location,
+			ID:       node.ID,
+		})
+	}
+	return out
+}
+
+func (d *Document) Snapshot() ([]byte, error) {
+	snapshot := struct {
+		Textcontent []CRDTNode `json:"textcontent"`
+	}{
+		Textcontent: d.Textcontent.Snap(),
+	}
+	return json.Marshal(snapshot)
+	// skickar som byte-kod så det inte blir långsamt med stora dokument
+}
+
+func LoadSnapshot(jsonStr string) string {
+
+	jsonBytes := []byte(jsonStr)
+
+	var toLoad struct {
+		Textcontent []CRDTNode
+	}
+
+	err := json.Unmarshal(jsonBytes, &toLoad)
+	if err != nil {
+		println("error when unmarshalling loaded snapshot (LoadSnapshot in crdt.go)")
+		panic(err)
+	}
+
+	loadedDoc := NewDocument()
+
+	for _, node := range toLoad.Textcontent {
+		newItem := Item{Letter: node.Letter, Location: node.Location, ID: node.ID}
+		loadedDoc.Textcontent.Append(&newItem)
+		// println("LD:", node.Letter, "appended.")
+	}
+	loadedDoc.Active = true
+	docu = loadedDoc
+
+	docAsStr := docu.ToString()
+	docu.Textcontent.Length = len(docAsStr)
+
+	println("Final loaded doc:", docAsStr)
+
+	PrintDocument(true)
+
+	return docAsStr
+}
 
 func SetUserID(id int) {
 	uID = id
 	println("User ID set in CRDT as ID: ", uID)
 }
 
+func PrintDocument(verbose bool) {
+	var result string
+	for current := docu.Textcontent.Head; current != nil; current = current.Next {
+		result += current.Letter
+		if verbose {
+			fmt.Println(" x ", current.Location.Coordinate, current.Letter)
+		}
+	}
+	println("Result:", result)
+	println("Doc tail:", docu.Textcontent.Tail.Letter)
+
+}
+
 func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedDocMessage {
-	doc := DocumentFromStr(document)
-	doc.SetCursorAt(cursorIndex)
+
+	if !docu.Active {
+		println("Initializing document... (crdt.go)")
+		docu = DocumentFromStr(document)
+		docu.Active = true
+	}
+
+	// docu.SetCursorAt(cursorIndex)
 
 	if uID == -1 {
 		println("Error: User ID not initialized")
 	}
 
 	for _, change := range changes {
-
+		println("chtxt:", change.Text, "frB:", change.FromB, "  (crdt.go)")
 		// Ta bort
 		if change.Text == "" {
 			for i := change.ToA; i > change.FromA; i-- {
-				doc.DeleteAtIndex(i)
+				docu.DeleteAtIndex(i)
 			}
 			// Lägg till
 		} else if change.FromA == change.ToA {
 			i := 0
 			for _, ch := range change.Text {
-				doc.LoadInsert(string(ch), change.FromB+i, uID)
+				docu.LoadInsert(string(ch), change.FromB+i, uID)
 				i++
 			}
 			// Select och byt ut
 		} else {
 			for i := change.ToA; i > change.FromA; i-- {
-				doc.DeleteAtIndex(i)
+				docu.DeleteAtIndex(i)
 			}
 
 			i := 0
 			for _, ch := range change.Text {
-				doc.LoadInsert(string(ch), change.FromB+i, uID)
+				docu.LoadInsert(string(ch), change.FromB+i, uID)
 				i++
 			}
 		}
 
 	}
 
+	docu.PrintDocument(true)
+
 	return UpdatedDocMessage{
-		Document:    doc.ToString(),
-		CursorIndex: doc.CursorIndex(),
+		Document:    docu.ToString(),
+		CursorIndex: docu.CursorIndex(),
 	}
 }
 
@@ -185,7 +279,8 @@ func CompareIndexes(c1 CoordT, c2 CoordT) bool {
 		} else {
 			fmt.Errorf("Coordinates are identical")
 			println("Error: Coordinates can't have the same size and ID. This should not happen!") // Har fått det felet
-			os.Exit(1)
+			fmt.Println(c1.Coordinate, "+", c1.ID, "vs", c2.Coordinate, "+", c2.ID)
+			//os.Exit(1)
 		}
 
 	}
@@ -336,6 +431,7 @@ func GetAppendCoordinate(prevCoord []int, uID int) CoordT {
 
 func (d *Document) findInsertCoord(uID int) CoordT {
 	cursorPosCoordinate := d.CursorPosition.Location // TODO REWRITE, det här är oläsbart
+
 	// Case 4
 	if d.CursorPosition.Next == nil {
 		return GetAppendCoordinate(cursorPosCoordinate.Coordinate, uID)
@@ -375,23 +471,27 @@ func (d *Document) CursorBackwards() {
 }
 
 func (d *Document) IndexToCoordinate(index int) (Item, bool) {
+
 	docLength := d.Textcontent.Length
 	var newPosition Item
 	var atEnd bool = false
 
+	println("i:", index, "doclen:", docLength, " (indextocoordinate)")
+
 	if index >= docLength {
 		index = docLength
 		atEnd = true
+		return *d.Textcontent.Tail, true
 	}
 
 	if index < 0 {
-		println("Error. Can't move cursor out of bounds")
+		println("Error. Can't move cursor out of bounds (IndexToCoordinate)")
 		os.Exit(1)
 
 	} else {
 
 		current := d.Textcontent.Head
-		for i := 0; i < index; i++ {
+		for i := 0; i < index+1; i++ {
 			current = current.Next
 		}
 
@@ -402,6 +502,8 @@ func (d *Document) IndexToCoordinate(index int) (Item, bool) {
 
 func (d *Document) LoadInsert(letter string, index int, uID int) {
 	prevItem, caseFour := d.IndexToCoordinate(index)
+	println("pr-itm:", prevItem.Letter, "c4?:", caseFour, " (LoadInsert)")
+
 	var location CoordT
 	if caseFour {
 		location = GetAppendCoordinate(prevItem.Location.Coordinate, uID)
