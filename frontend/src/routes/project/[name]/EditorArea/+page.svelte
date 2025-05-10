@@ -10,57 +10,59 @@
         let compileError = $state(0);    
         let pdfUrl = $state("");
         let compileCount = $state(0);
-        let errorMessage = $state("");
+        let errorMessage : string[] = $state([]);
+        let currentErrorIndex = $state(0);
 
-    function extractErrorsUsingRegex(logText: string): string[] {
+    function messageExtracting(logText: string): string[] {
         
         const regex = /(^!.*(?:\n(?!\s*$).*)*)/gm;
-        const matches = [];
+        let matches = [];
         let match;
         let len = 0;
-        
+            
         while ((match = regex.exec(logText)) !== null) {
-        let errorMessage = match[0].trim();
+            let errorMessage = match[0].trim();
 
-        matches.push(errorMessage);
-    }
-    
+            len = matches.push(errorMessage);
+        }
+        
+        console.log(matches[matches.length -1])
         //ta bort de två sista elementen av arrayn då de inte är användbara
-        if(matches[len - 1] == "!  ==> Fatal error occurred, no output PDF file produced!"){
+        if (matches[len -1] == "!  ==> Fatal error occurred, no output PDF file produced!") {
             compileError = 1;
-            delete matches[len-2];
-            delete matches[len-1];
-        }else{
+            matches.pop();  // Remove the last element
+            matches.pop();  // Remove the second-to-last element
+            
+            
+        } else {
             compileError = 2;
         }
+
+        matches = messageCleanUp(matches);
         return matches;
+    }
+
+    function messageCleanUp(errorMessages: string[]): string[] {
+        let newMessages : string[] = [];
+        newMessages = errorMessages;
+
+        return newMessages;
     }
 
     async function compile() {
         compileError = 0;
-        errorMessage = ""
+        errorMessage = []
         const serverUrl = `http://${location.hostname}:8080`;
         const res = await fetch(`${serverUrl}/projects/${page.params.name}/pdf`);
-
-        
 
         if (!res.ok) {
             //fetch projects logFile
             const logText = await fetch(`${serverUrl}/projects/${page.params.name}/documents/document.log`)
                     .then(response => response.text())
-            console.log(logText);
                     
             console.error("Failed to compile LaTeX:", await res.text());
-            const errorArray = extractErrorsUsingRegex(logText);
+            errorMessage = messageExtracting(logText);
 
-            let counter = 1;
-            errorArray.forEach(message => {
-                errorMessage += `Error ${counter}: `;
-                errorMessage += message;
-                errorMessage += "\n\n";
-                counter += 1;
-
-            });
             return;
         }
 
@@ -74,27 +76,43 @@
 
 
 
-    <div class="page-container">
-        <Header/>
-        <div class="toolbar">
-            <Toolbar {compile} />
-            {#if compileError === 1 || compileError === 2}
-                <div class="error-console">
-                    <strong>
-                        {compileError === 1 
-                            ? 'Compiling error, but could compile:' 
-                            : 'Compiling error, could not compile:'}
-                    </strong>
-                    <pre>{errorMessage}</pre>
-                </div>
-            {/if}
-        </div>
-        <div class="content">
-            <Editor />
-            <Viewer {pdfUrl} {compileCount}/>
-        </div>
-        <Footer/>
+<div class="page-container">
+    <Header />
+
+    <div class="toolbar">
+        <Toolbar {compile} />
+
+        {#if errorMessage.length > 0}
+            <div class="error-console">
+                <strong>
+                    Compiling error {errorMessage.length > 1 ? `(Error ${currentErrorIndex + 1} of ${errorMessage.length})` : ''}:
+                </strong>
+                <pre>{errorMessage[currentErrorIndex]}</pre>
+
+                {#if errorMessage.length > 1}
+                    <div class="error-navigation">
+                        <!-- svelte-ignore event_directive_deprecated -->
+                        <button on:click={currentErrorIndex = (currentErrorIndex - 1 + errorMessage.length) % errorMessage.length}>
+                            &lt; <u>Prev</u>
+                        </button>
+                        <!-- svelte-ignore event_directive_deprecated -->
+                        <button on:click={() => currentErrorIndex = (currentErrorIndex + 1) % errorMessage.length}>
+                            <u>Next</u> &gt;
+                        </button>
+                    </div>
+                {/if}
+            </div>
+        {/if}
+    </div> 
+
+    <div class="content">
+        <Editor />
+        <Viewer {pdfUrl} {compileCount} />
     </div>
+
+    <Footer />
+</div>
+
 
     <style>
         .page-container {
@@ -116,4 +134,17 @@
             border-radius: 6px;
             font-family: monospace;
         }
+
+
+        .error-navigation button {
+            border-radius: 5px; /* You can adjust this number */
+            padding: 0.4em 0.8em;
+            border: 1px solid #a00;
+            background-color: rgba(170, 0, 0, 0);
+            color: #a00;
+            cursor: pointer;
+            margin: 0 0.5em;
+            font-family: monospace;
+        }
+
     </style>
