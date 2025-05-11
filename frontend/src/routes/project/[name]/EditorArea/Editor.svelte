@@ -40,8 +40,8 @@
     }
 
     type Envelope = {
-        type: string          
-        editDocMsg: UpdatedDocMessage
+        Type: string          
+        EditDocMsg: UpdatedDocMessage
     }
 
     async function applyUpdate(document: string, changes: Change[]) {
@@ -89,9 +89,12 @@
         )
 
         const env: Envelope = {
-            type: "operation",
-            editDocMsg: updatedDocMessage
+            Type: "operation",
+            EditDocMsg: updatedDocMessage,
+
         }
+
+        console.log("Sending envelope:",env)
 
         socket.send(JSON.stringify(env));
 

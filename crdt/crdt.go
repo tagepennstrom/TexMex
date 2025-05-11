@@ -130,33 +130,56 @@ func LoadSnapshot(jsonStr string) string {
 	return docAsStr
 }
 
+// *
+// Ladda in state eller ändringar
+// *
+
 func SetUserID(id int) {
 	uID = id
 	println("User ID set in CRDT as ID: ", uID)
 }
 
-func PrintDocument(verbose bool) {
-	var result string
-	for current := docu.Textcontent.Head; current != nil; current = current.Next {
-		result += current.Letter
-		if verbose {
-			fmt.Println(" x ", current.Location.Coordinate, current.Letter)
-		}
-	}
-	println("Result:", result, "(PrintDocument in crdt.go)")
-	println("Doc tail:", docu.Textcontent.Tail.Letter)
-
-}
-
 func buildCoordChange(crd CoordT, op string, ltr string) CoordChanges {
 
-	change := CoordChanges{
+	return CoordChanges{
 		Coordinate: crd,
 		Operation:  op,
 		Letter:     ltr,
 	}
+}
 
-	return change
+func (d *Document) HandleCChange(jsonCChange string) {
+	//parse
+	println("**** CChange Handler:")
+
+	var cChanges []CoordChanges
+
+	c := []byte(jsonCChange)
+
+	json.Unmarshal(c, &cChanges)
+
+	//println("*** CC Debug:", cChanges[0].Operation)
+
+	for _, change := range cChanges {
+		println("** CChange OP:", change.Operation)
+
+		coord := change.Coordinate
+
+		switch change.Operation {
+
+		case "delete":
+			// move cursor
+			docu.DeleteAtCoordinate(coord)
+			break
+
+		case "insert":
+			docu.InsertAtCoordinate(coord, change.Letter)
+			break
+
+		}
+
+	}
+
 }
 
 func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedDocMessage {
@@ -225,6 +248,23 @@ func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedD
 
 }
 
+// *
+// Vanliga CRDT Funktioner
+// *
+
+func PrintDocument(verbose bool) {
+	var result string
+	for current := docu.Textcontent.Head; current != nil; current = current.Next {
+		result += current.Letter
+		if verbose {
+			fmt.Println(" x ", current.Location.Coordinate, current.Letter)
+		}
+	}
+	println("Result:", result, "(PrintDocument in crdt.go)")
+	println("Doc tail:", docu.Textcontent.Tail.Letter)
+
+}
+
 func DocumentFromStr(str string) Document {
 	doc := NewDocument()
 	for _, ch := range str {
@@ -266,6 +306,29 @@ func (doc *Document) SetCursorAt(index int) {
 		item = item.Next
 		i++
 	}
+}
+
+func (doc *Document) InsertAtCoordinate(c CoordT, l string) {
+	doc.Textcontent = Insertion(l, c, doc.Textcontent, c.ID)
+
+}
+
+func (doc *Document) DeleteAtCoordinate(c CoordT) {
+	prev := findPrevItem(c, doc.Textcontent).Next
+
+	toDel := prev.Next
+
+	// forward link
+	prev.Next = toDel.Next
+
+	if toDel.Next != nil {
+		// backward link
+		toDel.Next.Prev = toDel.Prev
+	} else {
+		doc.Textcontent.Tail = toDel.Prev
+	}
+
+	doc.Textcontent.Length--
 }
 
 func (ll *LinkedList) Append(newItem *Item) {
@@ -661,14 +724,4 @@ func (d *Document) CordReset() {
 		current.Location.Coordinate = []int{i}
 		current = current.Next
 	}
-}
-
-func (d *Document) PrintDoc() {
-	var result string
-	for current := d.Textcontent.Head; current != nil; current = current.Next {
-		result += current.Letter
-
-	}
-	println("Result:", result, "(PrintDoc in crdt.go)")
-
 }

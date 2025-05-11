@@ -26,7 +26,9 @@ type Change struct {
 }
 
 type EditDocMessage struct {
-	Changes []Change `json:"changes"`
+	document     string
+	cursorIndex  int
+	jsonCChanges string
 }
 
 type Envelope struct {
@@ -41,10 +43,17 @@ type Client struct {
 	id    int
 }
 
+// *
 // Globala variabler
+// *
+
 var connections []Client
 var currId int = 0
 var globalDocument crdt.Document
+
+// *
+// Funktioner
+// *
 
 func getLocalIP() (string, error) {
 	conn, err := net.Dial("udp", "12.34.56.78:90")
@@ -141,6 +150,23 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		case "operation":
 
 			println("operation case (server.go)")
+
+			// uppdatera globala versionen
+			println(
+				"a)", env.EditDocMsg.document,
+				"b)", env.EditDocMsg.cursorIndex,
+				"c)", env.EditDocMsg.jsonCChanges,
+			)
+			fmt.Println("d)", env.EditDocMsg)
+			fmt.Println("e)", env)
+
+			jsonCChange := env.EditDocMsg.jsonCChanges
+
+			globalDocument.HandleCChange(jsonCChange)
+
+			println("-------Global Update--------")
+			globalDocument.PrintDocument(false)
+
 			broadcastMessage(ctx, env.EditDocMsg, user)
 			break
 
