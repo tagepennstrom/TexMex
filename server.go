@@ -151,13 +151,8 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 			println("operation case (server.go)")
 
 			// uppdatera globala versionen
-
 			jsonCChange := env.EditDocMsg.JsonCChanges
-
 			globalDocument.HandleCChange(jsonCChange)
-
-			println("-------Global Update--------")
-			globalDocument.PrintDocument(false)
 
 			broadcastMessage(ctx, env.EditDocMsg, user)
 			break

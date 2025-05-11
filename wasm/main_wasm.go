@@ -103,12 +103,28 @@ func updateDocumentWrap(this js.Value, args []js.Value) any {
 	return js.ValueOf(m)
 }
 
+func handleOperation(this js.Value, args []js.Value) any {
+	if len(args) != 1 {
+		println("Wrong number of arguments (HandleOperation)")
+		return nil
+	}
+
+	jsonChange := args[0].String()
+
+	crdt.DocuMain.HandleCChange(jsonChange)
+
+	strDoc := crdt.DocuMain.ToString()
+
+	return strDoc
+}
+
 func registerCallbacks() {
 	js.Global().Set("UpdateDocument", js.FuncOf(updateDocumentWrap))
 	js.Global().Set("SetUserID", js.FuncOf(initUser))
 	js.Global().Set("CRDebug", js.FuncOf(debugFeat))
 	js.Global().Set("InitializeDocument", js.FuncOf(initDocument))
 	js.Global().Set("LoadState", js.FuncOf(loadState))
+	js.Global().Set("HandleOperation", js.FuncOf(handleOperation))
 
 	println("Function callbacks registered")
 }

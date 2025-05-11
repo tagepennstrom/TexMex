@@ -38,22 +38,22 @@
         EditDocMsg: UpdatedDocMessage
     }
 
-    async function applyUpdate(document: string, changes: Change[]) {
+    async function applyUpdate(document: string, jsonChanges: string) {
         updateFromCode = true;
-        const updatedDocMessage: UpdatedDocMessage = UpdateDocument(
-            document,
-            changes,
-            editorView.state.selection.main.anchor
-        )
-        console.log(updatedDocMessage);
+
+        const strDoc: string = HandleOperation(jsonChanges)
+
+        // TODO: Hårdkodad cursor index for now
+        const cursorIndex: number = strDoc.length
+
         editorView.dispatch({
             changes: {
                 from: 0,
                 to: editorView.state.doc.length,
-                insert: updatedDocMessage.document,
+                insert: strDoc,
             },
             selection: {
-                anchor: updatedDocMessage.cursorIndex,
+                anchor: cursorIndex,
             },
         });
         updateFromCode = false;
@@ -180,7 +180,7 @@
                 case "operation":
                     console.log(message.editDocMsg);
 
-                    let changes = message.editDocMsg.changes
+                    let changes = message.editDocMsg.jsonCChanges
                     applyUpdate(editorView.state.doc.toString(), changes)
                     break;
 

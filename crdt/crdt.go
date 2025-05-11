@@ -68,7 +68,7 @@ type CoordChanges struct {
 // *
 
 var uID int = -1
-var docu Document
+var DocuMain Document
 
 // *
 // Snapshot state logik (CRDT -> JSON)
@@ -115,13 +115,12 @@ func LoadSnapshot(jsonStr string) string {
 	for _, node := range toLoad.Textcontent {
 		newItem := Item{Letter: node.Letter, Location: node.Location, ID: node.ID}
 		loadedDoc.Textcontent.Append(&newItem)
-		// println("LD:", node.Letter, "appended.")
 	}
 	loadedDoc.Active = true
-	docu = loadedDoc
+	DocuMain = loadedDoc
 
-	docAsStr := docu.ToString()
-	docu.Textcontent.Length = len(docAsStr)
+	docAsStr := DocuMain.ToString()
+	DocuMain.Textcontent.Length = len(docAsStr)
 
 	println("Final loaded doc:", docAsStr)
 
@@ -149,26 +148,18 @@ func buildCoordChange(crd CoordT, op string, ltr string) CoordChanges {
 }
 
 func (d *Document) HandleCChange(jsonCChange string) {
-	//parse
-	println("**** CChange Handler:")
 
 	var cChanges []CoordChanges
 
 	c := []byte(jsonCChange)
-
 	json.Unmarshal(c, &cChanges)
 
-	//println("*** CC Debug:", cChanges[0].Operation)
-
 	for _, change := range cChanges {
-		println("** CChange OP:", change.Operation)
-
 		coord := change.Coordinate
 
 		switch change.Operation {
 
 		case "delete":
-			// move cursor
 			d.DeleteAtCoordinate(coord)
 			break
 
@@ -177,7 +168,6 @@ func (d *Document) HandleCChange(jsonCChange string) {
 			break
 
 		}
-
 	}
 
 }
@@ -197,7 +187,7 @@ func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedD
 		if change.Text == "" {
 			// DELETE Operation
 			for i := change.ToA; i > change.FromA; i-- {
-				crd := docu.DeleteAtIndex(i)
+				crd := DocuMain.DeleteAtIndex(i)
 
 				change := buildCoordChange(crd, "delete", "")
 				allChanges = append(allChanges, change)
@@ -207,7 +197,7 @@ func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedD
 			// INSERT Operation
 			i := 0
 			for _, ch := range change.Text {
-				crd := docu.LoadInsert(string(ch), change.FromB+i, uID)
+				crd := DocuMain.LoadInsert(string(ch), change.FromB+i, uID)
 
 				change := buildCoordChange(crd, "insert", string(ch))
 				allChanges = append(allChanges, change)
@@ -218,7 +208,7 @@ func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedD
 		} else {
 			// SELECT AND REPLACE Operation
 			for i := change.ToA; i > change.FromA; i-- {
-				crd := docu.DeleteAtIndex(i)
+				crd := DocuMain.DeleteAtIndex(i)
 
 				change := buildCoordChange(crd, "delete", "")
 				allChanges = append(allChanges, change)
@@ -227,7 +217,7 @@ func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedD
 
 			i := 0
 			for _, ch := range change.Text {
-				crd := docu.LoadInsert(string(ch), change.FromB+i, uID)
+				crd := DocuMain.LoadInsert(string(ch), change.FromB+i, uID)
 
 				change := buildCoordChange(crd, "insert", string(ch))
 				allChanges = append(allChanges, change)
@@ -238,11 +228,11 @@ func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedD
 
 	}
 
-	docu.PrintDocument(true)
+	DocuMain.PrintDocument(true)
 
 	return UpdatedDocMessage{
-		Document:    docu.ToString(),
-		CursorIndex: docu.CursorIndex(),
+		Document:    DocuMain.ToString(),
+		CursorIndex: DocuMain.CursorIndex(),
 		CChanges:    allChanges,
 	}
 
@@ -254,14 +244,14 @@ func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedD
 
 func PrintDocument(verbose bool) {
 	var result string
-	for current := docu.Textcontent.Head; current != nil; current = current.Next {
+	for current := DocuMain.Textcontent.Head; current != nil; current = current.Next {
 		result += current.Letter
 		if verbose {
 			fmt.Println(" x ", current.Location.Coordinate, current.Letter)
 		}
 	}
 	println("Result:", result, "(PrintDocument in crdt.go)")
-	println("Doc tail:", docu.Textcontent.Tail.Letter)
+	println("Doc tail:", DocuMain.Textcontent.Tail.Letter)
 
 }
 
@@ -466,8 +456,6 @@ func findPrevItem(insertionCoord CoordT, db LinkedList) *Item {
 
 	prev := db.Head
 	for prev.Next != nil {
-		fmt.Println(" ##-## * :", prev.Location.Coordinate)
-
 		if CompareIndexes(prev.Next.Location, insertionCoord) {
 			break
 		} else {
