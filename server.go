@@ -47,7 +47,7 @@ type Client struct {
 // *
 
 var connections []Client
-var currId int = 0
+var currIDCounter int = 0
 var globalDocument crdt.Document
 
 // *
@@ -107,8 +107,8 @@ func acceptConnection(w http.ResponseWriter, r *http.Request) Client {
 	if err != nil {
 		log.Printf("Failed to create websocket connection: %s", err)
 	}
-	currId++
-	user := Client{wscon: c, id: currId}
+	currIDCounter++
+	user := Client{wscon: c, id: currIDCounter}
 	return user
 
 }
@@ -147,10 +147,7 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		switch env.Type {
 
 		case "operation":
-
-			println("operation case (server.go)")
-
-			// uppdatera globala versionen
+			// uppdatera globala CRDTn
 			jsonCChange := env.EditDocMsg.JsonCChanges
 			globalDocument.HandleCChange(jsonCChange)
 
@@ -158,8 +155,6 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 			break
 
 		case "stateRequest":
-			println("Global CRDT state is:", globalDocument.ToString())
-
 			data, err := globalDocument.Snapshot()
 
 			if err != nil {
@@ -173,7 +168,7 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			wsjson.Write(ctx, user.wscon, resp)
-			println("Request sent")
+			println("Response to request sent")
 			break
 
 		default:

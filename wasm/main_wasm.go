@@ -20,37 +20,15 @@ import (
 	"websocket-server/crdt"
 )
 
-func debugFeat(this js.Value, args []js.Value) any {
-	if len(args) != 0 {
-		println("Wrong number of arguments [ CRDebug() ]")
-		return nil
-	}
-
-	crdt.PrintDocument(true)
-
-	return nil
-}
-
 func initUser(this js.Value, args []js.Value) any {
 	if len(args) != 1 {
 		println("Wrong number of arguments [ SetUserID() ]")
 		return nil
 	}
 	id := args[0].Int()
-	println("Initializing user ", id, " (main_wasm)")
 
 	crdt.SetUserID(id)
 
-	return nil
-}
-
-func initDocument(this js.Value, args []js.Value) any {
-	if len(args) != 0 {
-		println("Wrong number of arguments [ InitializeDocument() ]")
-		return nil
-	}
-
-	println("Init document (main_wasm.go)")
 	return nil
 }
 
@@ -62,23 +40,20 @@ func loadState(this js.Value, args []js.Value) any {
 
 	jsonString := args[0].String()
 
-	newDoc := crdt.LoadSnapshot(jsonString)
+	newDocStr := crdt.LoadSnapshot(jsonString)
 
-	return newDoc
+	return newDocStr
 }
 
 func updateDocumentWrap(this js.Value, args []js.Value) any {
-	if len(args) != 3 {
+	if len(args) != 2 {
 		println("Wrong number of arguments")
 		return nil
 	}
 
-	document := args[0].String()
-	cursorIndex := args[2].Int()
-
-	changes := make([]crdt.Change, args[1].Length())
+	changes := make([]crdt.Change, args[0].Length())
 	for i := range len(changes) {
-		change := args[1].Index(i)
+		change := args[0].Index(i)
 		changes[i] = crdt.Change{
 			FromA: change.Get("fromA").Int(),
 			ToA:   change.Get("toA").Int(),
@@ -87,7 +62,10 @@ func updateDocumentWrap(this js.Value, args []js.Value) any {
 			Text:  change.Get("text").String(),
 		}
 	}
-	res := crdt.UpdateDocument(document, changes, cursorIndex)
+
+	cursorIndex := args[1].Int()
+
+	res := crdt.UpdateDocument(changes, cursorIndex)
 
 	jsonChanges, err := json.Marshal(res.CChanges)
 	if err != nil {
@@ -110,7 +88,6 @@ func handleOperation(this js.Value, args []js.Value) any {
 	}
 
 	jsonChange := args[0].String()
-
 	crdt.DocuMain.HandleCChange(jsonChange)
 
 	strDoc := crdt.DocuMain.ToString()
@@ -118,11 +95,20 @@ func handleOperation(this js.Value, args []js.Value) any {
 	return strDoc
 }
 
+func debugFeat(this js.Value, args []js.Value) any {
+	if len(args) != 0 {
+		println("Wrong number of arguments [ CRDebug() ]")
+		return nil
+	}
+
+	crdt.PrintDocument(true)
+	return nil
+}
+
 func registerCallbacks() {
 	js.Global().Set("UpdateDocument", js.FuncOf(updateDocumentWrap))
 	js.Global().Set("SetUserID", js.FuncOf(initUser))
 	js.Global().Set("CRDebug", js.FuncOf(debugFeat))
-	js.Global().Set("InitializeDocument", js.FuncOf(initDocument))
 	js.Global().Set("LoadState", js.FuncOf(loadState))
 	js.Global().Set("HandleOperation", js.FuncOf(handleOperation))
 

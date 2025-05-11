@@ -122,10 +122,6 @@ func LoadSnapshot(jsonStr string) string {
 	docAsStr := DocuMain.ToString()
 	DocuMain.Textcontent.Length = len(docAsStr)
 
-	println("Final loaded doc:", docAsStr)
-
-	PrintDocument(true)
-
 	return docAsStr
 }
 
@@ -150,7 +146,6 @@ func buildCoordChange(crd CoordT, op string, ltr string) CoordChanges {
 func (d *Document) HandleCChange(jsonCChange string) {
 
 	var cChanges []CoordChanges
-
 	c := []byte(jsonCChange)
 	json.Unmarshal(c, &cChanges)
 
@@ -172,17 +167,11 @@ func (d *Document) HandleCChange(jsonCChange string) {
 
 }
 
-func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedDocMessage {
-
-	if uID == -1 {
-		println("Error: User ID not initialized")
-		os.Exit(69)
-	}
+func applyAndRecordOperations(changes []Change) []CoordChanges {
 
 	var allChanges []CoordChanges
 
 	for _, change := range changes {
-		println("chtxt:", change.Text, "frB:", change.FromB, "  (crdt.go)")
 
 		if change.Text == "" {
 			// DELETE Operation
@@ -228,14 +217,23 @@ func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedD
 
 	}
 
-	DocuMain.PrintDocument(true)
+	return allChanges
+}
+
+func UpdateDocument(changes []Change, cursorIndex int) UpdatedDocMessage {
+
+	if uID == -1 {
+		println("Error: User ID not initialized")
+		os.Exit(69)
+	}
+
+	allChanges := applyAndRecordOperations(changes)
 
 	return UpdatedDocMessage{
 		Document:    DocuMain.ToString(),
 		CursorIndex: DocuMain.CursorIndex(),
 		CChanges:    allChanges,
 	}
-
 }
 
 // *
@@ -564,8 +562,6 @@ func (d *Document) IndexToCoordinate(index int) (Item, bool) {
 	var newPosition Item
 	var atEnd bool = false
 
-	println("i:", index, "doclen:", docLength, " (indextocoordinate)")
-
 	if index >= docLength {
 		index = docLength
 		atEnd = true
@@ -590,7 +586,6 @@ func (d *Document) IndexToCoordinate(index int) (Item, bool) {
 
 func (d *Document) LoadInsert(letter string, index int, uID int) CoordT {
 	prevItem, caseFour := d.IndexToCoordinate(index)
-	println("pr-itm:", prevItem.Letter, "c4?:", caseFour, " (LoadInsert)")
 
 	var location CoordT
 	if caseFour {

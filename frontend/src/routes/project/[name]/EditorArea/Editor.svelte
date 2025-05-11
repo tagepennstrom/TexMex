@@ -17,8 +17,6 @@
     let editor: HTMLElement;
     let editorView: EditorView;
 
-    let uID: number; // saved uID
-
     type Change = {
         fromA: number;   // Start index
         toA: number;     // Slut index
@@ -43,7 +41,7 @@
 
         const strDoc: string = HandleOperation(jsonChanges)
 
-        // TODO: Hårdkodad cursor index for now
+        // TODO: Hårdkodad cursor index, byt mot hur det fungerade förut
         const cursorIndex: number = strDoc.length
 
         editorView.dispatch({
@@ -73,19 +71,16 @@
             });
         });
 
-        const document = editorView.state.doc.toString();
         const cursorIndex = editorView.state.selection.main.anchor;
 
-        const updatedDocMessage: UpdatedDocMessage = UpdateDocument(
-            document,
+        const updDocMsg: UpdatedDocMessage = UpdateDocument(
             changes,
             cursorIndex,
         )
 
         const env: Envelope = {
             Type: "operation",
-            EditDocMsg: updatedDocMessage,
-
+            EditDocMsg: updDocMsg,
         }
 
         console.log("Sending envelope:",env)
@@ -96,12 +91,9 @@
         fetch(`${serverUrl}/projects/${page.params.name}/documents/document.tex`, {
             method: "PUT",
             headers: { "Content-Type": "text/plain" },
-            body: updatedDocMessage.document,
+            body: updDocMsg.document,
         })
     }
-
-
-
 
     const BlockLocalChanges = EditorState.transactionFilter.of(tr => {
         if (tr.docChanged && !updateFromCode) {
@@ -110,7 +102,6 @@
         return tr;
     })
 
-    
     const fixedHeightEditor = EditorView.theme({
         "&": {height: "700px"},
         ".cm-scroller": {overflow: "auto"}
@@ -125,20 +116,17 @@
         autocompletion({ override: [myCompletions] })]
 
 
-
     onMount(() => {
         const serverUrl = `http://${location.hostname}:8080`;
         socket = new WebSocket(`${serverUrl}/editDocWebsocket`);
 
         socket.addEventListener("message", (event) => {
             const message = JSON.parse(event.data);
-            console.log("hello this is type:", message.type)
             switch (message.type) {
 
                 case "user_connected":
                     console.log("New user connected. ID: " + message.id);
                     SetUserID(message.id)
-                    uID = message.id
 
                     socket.send(JSON.stringify({
                         type:     "stateRequest",
@@ -156,10 +144,7 @@
                     const jsonString = atob(encodedState);
                     const loadedDocStr = LoadState(jsonString)
 
-                    console.log("Recieved doc:", loadedDocStr)
-                    console.log("Dispatched text to frontend.")
-
-                    const cursorPos = loadedDocStr.length // onödigt?
+                    console.log("Recieved doc state:", loadedDocStr)
 
                     editorView.dispatch({
                                 changes: {
@@ -168,7 +153,7 @@
                                     insert: loadedDocStr,
                                 },
                                 selection: {
-                                    anchor: cursorPos
+                                    anchor: loadedDocStr.length
                                 },
                             });
 
@@ -190,15 +175,6 @@
                     console.log(message)
 
                     break;
-
-            }
-
-
-            if (message.id != undefined){
-                
-
-            } else {
-                
             }
 
         });
