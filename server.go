@@ -26,16 +26,15 @@ type Change struct {
 }
 
 type EditDocMessage struct {
-	document     string
-	cursorIndex  int
-	jsonCChanges string
+	Document     string `json:"document"`
+	CursorIndex  int    `json:"cursorIndex"`
+	JsonCChanges string `json:"jsonCChanges"`
 }
 
 type Envelope struct {
 	Type       string         `json:"type"`                 // "operation", "stateRequest", "stateResponse"
 	EditDocMsg EditDocMessage `json:"editDocMsg,omitempty"` // changes
 	ByteState  []byte         `json:"byteState,omitempty"`  // for stateResponse
-	UserID     int            `json:"userId,omitempty"`     // optional sender ID
 }
 
 type Client struct {
@@ -152,15 +151,8 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 			println("operation case (server.go)")
 
 			// uppdatera globala versionen
-			println(
-				"a)", env.EditDocMsg.document,
-				"b)", env.EditDocMsg.cursorIndex,
-				"c)", env.EditDocMsg.jsonCChanges,
-			)
-			fmt.Println("d)", env.EditDocMsg)
-			fmt.Println("e)", env)
 
-			jsonCChange := env.EditDocMsg.jsonCChanges
+			jsonCChange := env.EditDocMsg.JsonCChanges
 
 			globalDocument.HandleCChange(jsonCChange)
 

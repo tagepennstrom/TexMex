@@ -26,12 +26,6 @@
         toB: number;     // Slut index
         text: string;   // Tillagd text, tom vid borttagning
     }
-    
-    type Message = {
-        document: string
-        changes: Change[]
-        cursorIndex: number
-    }
 
     type UpdatedDocMessage = {
         document: string

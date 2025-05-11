@@ -169,11 +169,11 @@ func (d *Document) HandleCChange(jsonCChange string) {
 
 		case "delete":
 			// move cursor
-			docu.DeleteAtCoordinate(coord)
+			d.DeleteAtCoordinate(coord)
 			break
 
 		case "insert":
-			docu.InsertAtCoordinate(coord, change.Letter)
+			d.InsertAtCoordinate(coord, change.Letter)
 			break
 
 		}
@@ -268,7 +268,7 @@ func PrintDocument(verbose bool) {
 func DocumentFromStr(str string) Document {
 	doc := NewDocument()
 	for _, ch := range str {
-		doc.Insert(string(ch), 1)
+		doc.Insert(string(ch), 0)
 	}
 	return doc
 }
@@ -309,6 +309,7 @@ func (doc *Document) SetCursorAt(index int) {
 }
 
 func (doc *Document) InsertAtCoordinate(c CoordT, l string) {
+
 	doc.Textcontent = Insertion(l, c, doc.Textcontent, c.ID)
 
 }
@@ -462,8 +463,11 @@ func findIntermediateCoordinate(pCoord CoordT, nCoord CoordT) []int {
 }
 
 func findPrevItem(insertionCoord CoordT, db LinkedList) *Item {
+
 	prev := db.Head
 	for prev.Next != nil {
+		fmt.Println(" ##-## * :", prev.Location.Coordinate)
+
 		if CompareIndexes(prev.Next.Location, insertionCoord) {
 			break
 		} else {
