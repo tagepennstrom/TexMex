@@ -14,6 +14,7 @@ go build -o ..\frontend\src\wasm\main.wasm
 package main
 
 import (
+	"encoding/json"
 	"syscall/js"
 
 	"websocket-server/crdt"
@@ -87,10 +88,18 @@ func updateDocumentWrap(this js.Value, args []js.Value) any {
 		}
 	}
 	res := crdt.UpdateDocument(document, changes, cursorIndex)
-	var m = make(map[string]any)
-	m["document"] = res.Document
-	m["cursorIndex"] = res.CursorIndex
 
+	jsonChanges, err := json.Marshal(res.CChanges)
+	if err != nil {
+		println("marshal coordChanges failed:", err)
+		return nil
+	}
+
+	m := map[string]interface{}{
+		"document":     res.Document,
+		"cursorIndex":  res.CursorIndex,
+		"jsonCChanges": string(jsonChanges), // koordinater i json form
+	}
 	return js.ValueOf(m)
 }
 

@@ -27,8 +27,8 @@ type Item struct {
 }
 
 type CoordT struct {
-	Coordinate []int
-	ID         int
+	Coordinate []int `json:"coord"`
+	ID         int   `json:"id"`
 }
 
 type Change struct {
@@ -46,14 +46,21 @@ type EditDocMessage struct {
 }
 
 type UpdatedDocMessage struct {
-	Document    string `json:"document"`
-	CursorIndex int    `json:"cursorIndex"`
+	Document    string         `json:"document"`
+	CursorIndex int            `json:"cursorIndex"`
+	CChanges    []CoordChanges `json:"coordChanges"`
 }
 
 type CRDTNode struct {
 	Letter   string `json:"letter"`
 	Location CoordT `json:"location"`
 	ID       int    `json:"id"`
+}
+
+type CoordChanges struct {
+	Coordinate CoordT `json:"coordinate"`
+	Operation  string `json:"operation"`
+	Letter     string `json:"letter"`
 }
 
 // *
@@ -136,48 +143,72 @@ func PrintDocument(verbose bool) {
 			fmt.Println(" x ", current.Location.Coordinate, current.Letter)
 		}
 	}
-	println("Result:", result)
+	println("Result:", result, "(PrintDocument in crdt.go)")
 	println("Doc tail:", docu.Textcontent.Tail.Letter)
 
 }
 
-func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedDocMessage {
+func buildCoordChange(crd CoordT, op string, ltr string) CoordChanges {
 
-	if !docu.Active {
-		println("Initializing document... (crdt.go)")
-		docu = DocumentFromStr(document)
-		docu.Active = true
+	change := CoordChanges{
+		Coordinate: crd,
+		Operation:  op,
+		Letter:     ltr,
 	}
 
-	// docu.SetCursorAt(cursorIndex)
+	return change
+}
+
+func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedDocMessage {
 
 	if uID == -1 {
 		println("Error: User ID not initialized")
+		os.Exit(69)
 	}
+
+	var allChanges []CoordChanges
 
 	for _, change := range changes {
 		println("chtxt:", change.Text, "frB:", change.FromB, "  (crdt.go)")
-		// Ta bort
+
 		if change.Text == "" {
+			// DELETE Operation
 			for i := change.ToA; i > change.FromA; i-- {
-				docu.DeleteAtIndex(i)
+				crd := docu.DeleteAtIndex(i)
+
+				change := buildCoordChange(crd, "delete", "")
+				allChanges = append(allChanges, change)
 			}
-			// Lägg till
+
 		} else if change.FromA == change.ToA {
+			// INSERT Operation
 			i := 0
 			for _, ch := range change.Text {
-				docu.LoadInsert(string(ch), change.FromB+i, uID)
+				crd := docu.LoadInsert(string(ch), change.FromB+i, uID)
+
+				change := buildCoordChange(crd, "insert", string(ch))
+				allChanges = append(allChanges, change)
+
 				i++
 			}
-			// Select och byt ut
+
 		} else {
+			// SELECT AND REPLACE Operation
 			for i := change.ToA; i > change.FromA; i-- {
-				docu.DeleteAtIndex(i)
+				crd := docu.DeleteAtIndex(i)
+
+				change := buildCoordChange(crd, "delete", "")
+				allChanges = append(allChanges, change)
+
 			}
 
 			i := 0
 			for _, ch := range change.Text {
-				docu.LoadInsert(string(ch), change.FromB+i, uID)
+				crd := docu.LoadInsert(string(ch), change.FromB+i, uID)
+
+				change := buildCoordChange(crd, "insert", string(ch))
+				allChanges = append(allChanges, change)
+
 				i++
 			}
 		}
@@ -189,7 +220,9 @@ func UpdateDocument(document string, changes []Change, cursorIndex int) UpdatedD
 	return UpdatedDocMessage{
 		Document:    docu.ToString(),
 		CursorIndex: docu.CursorIndex(),
+		CChanges:    allChanges,
 	}
+
 }
 
 func DocumentFromStr(str string) Document {
@@ -500,7 +533,7 @@ func (d *Document) IndexToCoordinate(index int) (Item, bool) {
 	return newPosition, atEnd
 }
 
-func (d *Document) LoadInsert(letter string, index int, uID int) {
+func (d *Document) LoadInsert(letter string, index int, uID int) CoordT {
 	prevItem, caseFour := d.IndexToCoordinate(index)
 	println("pr-itm:", prevItem.Letter, "c4?:", caseFour, " (LoadInsert)")
 
@@ -521,6 +554,8 @@ func (d *Document) LoadInsert(letter string, index int, uID int) {
 	if d.CursorIndex() == index {
 		d.CursorForward()
 	}
+
+	return location
 }
 
 func (d *Document) MoveCursor(index int) {
@@ -540,23 +575,28 @@ func (d *Document) MoveCursor(index int) {
 	}
 }
 
-func (d *Document) DeleteAtIndex(index int) {
+func (d *Document) DeleteAtIndex(index int) CoordT {
 	cursorIndex := d.CursorIndex()
 	d.SetCursorAt(index)
-	d.Delete()
+	deletedCoord := d.Delete()
+
 	if cursorIndex >= index {
 		d.SetCursorAt(cursorIndex - 1)
 	} else {
 		d.SetCursorAt(cursorIndex)
 	}
+
+	return deletedCoord
 }
 
 // OBS använder oss bara av current cursor position för deletion just nu
-func (d *Document) Delete() {
+func (d *Document) Delete() CoordT {
 	if d.CursorPosition.Prev != nil {
 		savedCursor := d.CursorPosition
 
 		d.CursorBackwards()
+
+		deletedCoordinate := savedCursor.Location
 
 		// Link the previous node to the next node
 		savedCursor.Prev.Next = savedCursor.Next
@@ -571,6 +611,12 @@ func (d *Document) Delete() {
 
 		d.Textcontent.Length--
 
+		return deletedCoordinate
+
+	} else {
+		println("Error: det fanns inte en else förut men jag behövde nån return. Antar att detta aldrig händer ( Delete() i crdt.go )")
+		os.Exit(69)
+		return d.CursorPosition.Location
 	}
 }
 
@@ -623,6 +669,6 @@ func (d *Document) PrintDoc() {
 		result += current.Letter
 
 	}
-	println("Result:", result)
+	println("Result:", result, "(PrintDoc in crdt.go)")
 
 }

@@ -36,6 +36,12 @@
     type UpdatedDocMessage = {
         document: string
         cursorIndex: number
+        jsonCChanges: string
+    }
+
+    type Envelope = {
+        type: string          
+        editDocMsg: UpdatedDocMessage
     }
 
     async function applyUpdate(document: string, changes: Change[]) {
@@ -59,8 +65,9 @@
         updateFromCode = false;
     }
 
+
     function sendChangesToCrdt(tr: Transaction): void {
-        const cursorIndex = editorView.state.selection.main.anchor;
+        
         const changes: Change[] = [];
         tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
             changes.push({
@@ -73,29 +80,18 @@
         });
 
         const document = editorView.state.doc.toString();
+        const cursorIndex = editorView.state.selection.main.anchor;
+
         const updatedDocMessage: UpdatedDocMessage = UpdateDocument(
             document,
             changes,
-            editorView.state.selection.main.anchor
+            cursorIndex,
         )
-
-        const message: Message = {
-            document: document,
-            changes: changes,
-            cursorIndex: cursorIndex,
-        };
-
-        type Envelope = {
-            type: string          
-            editDocMsg: UpdatedDocMessage
-        }
 
         const env: Envelope = {
             type: "operation",
             editDocMsg: updatedDocMessage
         }
-
-        console.log("Sending message:", message);
 
         socket.send(JSON.stringify(env));
 
