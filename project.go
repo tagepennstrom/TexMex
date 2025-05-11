@@ -115,8 +115,9 @@ func createProject(w http.ResponseWriter, r *http.Request) {
 	projectPath := fmt.Sprintf("%s/%s", projectsDir, name)
 	err := os.Mkdir(projectPath, os.FileMode(0775))
 	if err != nil {
-		log.Println(fmt.Sprintf("Unable to create project: %s", err))
-		http.Error(w, "Unable to create project", http.StatusInternalServerError)
+		errorMessage := fmt.Sprintf("Unable to create project: %s", err)
+		log.Println(errorMessage)
+		http.Error(w, errorMessage, http.StatusInternalServerError)
 		return
 	}
 

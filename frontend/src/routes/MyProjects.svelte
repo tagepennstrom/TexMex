@@ -13,6 +13,7 @@
 
     let showCreateProjectPopup = $state(false);
     let newProjectName = $state('');
+    let createProjectPopupError = $state('');
 
     onMount(() => {
         const serverUrl = `http://${location.hostname}:8080`;
@@ -26,15 +27,14 @@
     }
 
     async function createNewProject() {
+        createProjectPopupError = '';
         const serverUrl = `http://${location.hostname}:8080`;
         const res = await fetch(`${serverUrl}/projects/${newProjectName}`, {
             method: "POST",
         });
-        // TODO: show error message if fails
-        // for example if project with name already exists
-        // would need proper error handling in backend
         if (!res.ok) {
-            console.error(await res.text());
+            const errMsg = await res.text();
+            createProjectPopupError = errMsg;
             return;
         } 
         const newProjectUrl = `/project/${newProjectName}/EditorArea`; 
@@ -46,6 +46,7 @@
     function closeCreateProjectPopup() {
         showCreateProjectPopup = false;
         newProjectName = '';
+        createProjectPopupError = '';
     }
 
     function focusElem(elem: HTMLElement) {
@@ -74,8 +75,13 @@
                 </div>
                 <hr>
                 <input type='text' placeholder='Project Name' bind:value={newProjectName} required use:focusElem>
+                {#if createProjectPopupError !== ''}
+                    <div id='project-name-error-msg'>
+                        <span>{createProjectPopupError}</span>
+                    </div>
+                {/if}
                 <hr>
-                <button onclick={createNewProject} id='submitBtn' class='button-b outfit-300'>Create</button>
+                <button onclick={createNewProject} disabled={newProjectName === ''} id='submitBtn' class='outfit-300'>Create</button>
             </div>
         </div>
     {/if}
@@ -215,7 +221,6 @@
         bottom: 0;
         background-color: rgba(0,0,0,0.5);
         z-index: 2;
-        cursor: pointer;
     }
 
     #create-new-project-popup {
@@ -251,7 +256,7 @@
     #create-new-project-popup > input {
         display: block;
         font-size: 1rem;
-        margin: 0.7em 1rem;
+        margin: 0 1rem;
         width: calc(100% - 2rem);
         padding: 6px 8px;
         box-sizing: border-box;
@@ -265,8 +270,33 @@
         border-color: #366cbf
     }
 
+    #create-new-project-popup > #project-name-error-msg {
+        margin: 0 1rem;
+        color: red;
+    }
+
     #create-new-project-popup > #submitBtn {
+        background-color: #34a93c;
+        color: #fff;
         margin: 0.5rem 1rem;
+        padding: 10px 25px;
+        border: 1px solid #34a93c;
+        border-radius: 4px;
+        box-shadow: rgba(0, 0, 0, .2) 0 2px 4px 0;
+        font-size: 16px;
+    }
+
+    #create-new-project-popup > #submitBtn:enabled {
+        cursor: pointer;
+    }
+
+    #create-new-project-popup > #submitBtn:hover:enabled {
+        background-color: #168e48;
+    }
+
+    #create-new-project-popup > #submitBtn:disabled {
+        background-color: #8FC493;
+        border: none;
     }
 
     #projects-separator {
