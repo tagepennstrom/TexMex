@@ -53,16 +53,32 @@
         updateFromCode = true;
         changes.forEach((change) => {
             const index = CoordinateToIndex(JSON.stringify(change.coordinate));
-            editorView.dispatch({
-                changes: {
-                    from: index,
-                    to: index + change.letter.length,
-                    insert: change.letter,
-                },
-                selection: {
-                    anchor: GetCursorIndex(),
-                },
-            });
+            const cursorPos = editorView.state.selection.main.anchor;
+            if (change.operation == "insert") {
+                editorView.dispatch({
+                    changes: {
+                        from: index,
+                        to: index,
+                        insert: change.letter,
+                    },
+                    selection: {
+                        anchor: cursorPos > index ? cursorPos + 1 : cursorPos,
+                    },
+                });
+            } else if (change.operation == "delete") {
+                editorView.dispatch({
+                    changes: {
+                        from: index,
+                        to: index + 1,
+                        insert: change.letter,
+                    },
+                    selection: {
+                        anchor: cursorPos > index ? cursorPos - 1 : cursorPos,
+                    },
+                });
+            } else {
+                console.log("unsupported operation type");
+            }
         })
         updateFromCode = false;
     }
