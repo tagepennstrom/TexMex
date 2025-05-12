@@ -254,10 +254,15 @@ func getProjectPdf(w http.ResponseWriter, r *http.Request) {
 }
 
 func getFilesFromProject(w http.ResponseWriter, r *http.Request) {
-
+	/* ej implementerad */
 }
 
 func uploadFileToProject(w http.ResponseWriter, r *http.Request) {
+	projectName := r.URL.Query().Get("projectName")
+	if projectName == "" {
+		http.Error(w, "Empty project name", http.StatusBadRequest)
+	}
+
 	file, handler, err := r.FormFile("file")
 	if err != nil {
 		http.Error(w, "Can't read file", http.StatusBadRequest)
@@ -265,9 +270,9 @@ func uploadFileToProject(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	savePath := filepath.Join("projects/Test2/files", handler.Filename) /* Hardcoded */
+	path := filepath.Join("projects", projectName, "files", handler.Filename) /* Hardcoded */
 
-	dst, err := os.Create(savePath)
+	dst, err := os.Create(path)
 	if err != nil {
 		http.Error(w, "Can't save file", http.StatusInternalServerError)
 		return
@@ -280,5 +285,5 @@ func uploadFileToProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(w, `{"message": "Uploaded file to %s"}`, savePath)
+	fmt.Fprintf(w, `{"message": "Uploaded file to %s"}`, path)
 }

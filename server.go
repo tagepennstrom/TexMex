@@ -152,7 +152,7 @@ func main() {
 	mux.HandleFunc("/projects/{name}", middleware(projectHandler))
 	mux.HandleFunc("/projects/{projectName}/documents/{documentName}", middleware(projectDocumentHandler))
 	mux.HandleFunc("/projects/{name}/pdf", middleware(getProjectPdf))
-	mux.HandleFunc("/projects/{projectName}/uploadFile", middleware(uploadFileToProject))
+	mux.HandleFunc("/projects/uploadFile", middleware(uploadFileToProject))
 
 	mux.HandleFunc("/editDocWebsocket", editDocWebsocketHandler)
 

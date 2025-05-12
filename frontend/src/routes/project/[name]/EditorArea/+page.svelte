@@ -14,10 +14,11 @@
     let pdfUrl = $state("");
     let compileCount = $state(0);
     let errorMessage = $state("");
-    let projectName: String | null = null;
+    let projectName = $state<String | null>(null);
 
     onMount(() => {
         projectName = page.params.name;
+        console.log("Project name is: ", projectName);
     })
 
     function extractErrorsUsingRegex(logText: string): string[] {

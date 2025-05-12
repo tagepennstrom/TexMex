@@ -2,16 +2,21 @@
 	import { toggleFilesModal } from '$lib';
     import { showFilesModal } from './stores';
     import {fly } from 'svelte/transition';
+    export let projectName: String | null = null;
 
     type AllFiles = {
         name: String
     }
 
     let files: FileList | null = null;
-    export let projectName: String | null = null;
     let allFiles: AllFiles[];
 
     async function uploadFiles() {
+        if (!projectName) {
+            console.error("Projectname is null")
+            return;
+        }
+        
         if (!files || files.length === 0) {
             console.error("No files selected");
             return;
@@ -24,7 +29,7 @@
 
         try {
             const serverUrl = `http://${location.hostname}:8080`;
-            const response = await fetch(`${serverUrl}/projects/${projectName}/uploadFile`, {
+            const response = await fetch(`${serverUrl}/projects/uploadFile?projectName=${projectName}`, {
             method: "POST",
             body: formData,
         });
