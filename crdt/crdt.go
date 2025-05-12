@@ -155,7 +155,6 @@ func (d *Document) HandleCChange(jsonCChange string) {
 		switch change.Operation {
 
 		case "delete":
-			fmt.Println(" ** del at:", coord)
 			d.DeleteAtCoordinate(coord)
 			break
 
@@ -177,10 +176,7 @@ func applyAndRecordOperations(changes []Change) []CoordChanges {
 		if change.Text == "" {
 			// DELETE Operation
 			for i := change.ToA; i > change.FromA; i-- {
-				println("Before delete")
 				crd := DocuMain.DeleteAtIndex(i)
-				println("CRD:", crd.Coordinate[0])
-				println("After delete")
 
 				change := buildCoordChange(crd, "delete", "")
 				allChanges = append(allChanges, change)
@@ -310,10 +306,6 @@ func (doc *Document) DeleteAtCoordinate(c CoordT) {
 	toDel := findPrevItem(c, doc.Textcontent).Next // blir inte prev då det är samma coord
 
 	prev := toDel.Prev
-
-	fmt.Println("prev:", prev.Letter, prev.Location.Coordinate)
-
-	fmt.Println("todel:", toDel.Letter, toDel.Location.Coordinate)
 
 	// forward link
 	prev.Next = toDel.Next
