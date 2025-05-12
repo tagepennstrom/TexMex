@@ -7,12 +7,19 @@
         import Toolbar from './Toolbar.svelte';
 	import { showFilesModal } from '$lib/stores';
 	import FilesModal from '$lib/FilesModal.svelte';
+	import { onMount } from 'svelte';
 
 
-        let compileError = $state(0);    
-        let pdfUrl = $state("");
-        let compileCount = $state(0);
-        let errorMessage = $state("");
+    let compileError = $state(0);    
+    let pdfUrl = $state("");
+    let compileCount = $state(0);
+    let errorMessage = $state("");
+    let projectName = $state<String | null>(null);
+
+    onMount(() => {
+        projectName = page.params.name;
+        console.log("Project name is: ", projectName);
+    })
 
     function extractErrorsUsingRegex(logText: string): string[] {
         
@@ -42,13 +49,13 @@
         compileError = 0;
         errorMessage = ""
         const serverUrl = `http://${location.hostname}:8080`;
-        const res = await fetch(`${serverUrl}/projects/${page.params.name}/pdf`);
+        const res = await fetch(`${serverUrl}/projects/${projectName}/pdf`);
 
         
 
         if (!res.ok) {
             //fetch projects logFile
-            const logText = await fetch(`${serverUrl}/projects/${page.params.name}/documents/document.log`)
+            const logText = await fetch(`${serverUrl}/projects/${projectName}/documents/document.log`)
                     .then(response => response.text())
             console.log(logText);
                     
@@ -78,6 +85,11 @@
 
     <div class="page-container">
         <Header/>
+        {#if showFilesModal}
+            <div>
+                <FilesModal {projectName}/>
+            </div>
+        {/if}
         <div class="toolbar">
             <Toolbar {compile} />
             {#if compileError === 1 || compileError === 2}
@@ -92,11 +104,6 @@
             {/if}
         </div>
         <div class="content">
-            {#if showFilesModal}
-                <div>
-                    <FilesModal/>
-                </div>
-            {/if}
             <Editor />
             <Viewer {pdfUrl} {compileCount}/>
         </div>

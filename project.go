@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 )
 
 type Project struct {
@@ -17,6 +18,10 @@ type Project struct {
 
 type Document struct {
 	Name string `json:"name"`
+}
+
+type AllFiles struct {
+	Name string `json"name"`
 }
 
 const projectsDir = "projects"
@@ -115,6 +120,15 @@ func createProject(w http.ResponseWriter, r *http.Request) {
 	projectPath := fmt.Sprintf("%s/%s", projectsDir, name)
 	err := os.Mkdir(projectPath, os.FileMode(0775))
 	if err != nil {
+		errorMessage := fmt.Sprintf("Unable to create project: %s", err)
+		log.Println(errorMessage)
+		http.Error(w, errorMessage, http.StatusInternalServerError)
+		return
+	}
+
+	filesFolderPath := fmt.Sprintf("%s/files", projectPath)
+	err2 := os.Mkdir(filesFolderPath, os.FileMode(0775))
+	if err2 != nil {
 		errorMessage := fmt.Sprintf("Unable to create project: %s", err)
 		log.Println(errorMessage)
 		http.Error(w, errorMessage, http.StatusInternalServerError)
@@ -237,4 +251,39 @@ func getProjectPdf(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errorMessage, http.StatusInternalServerError)
 		return
 	}
+}
+
+func getFilesFromProject(w http.ResponseWriter, r *http.Request) {
+	/* ej implementerad */
+}
+
+func uploadFileToProject(w http.ResponseWriter, r *http.Request) {
+	projectName := r.URL.Query().Get("projectName")
+	if projectName == "" {
+		http.Error(w, "Empty project name", http.StatusBadRequest)
+	}
+
+	file, handler, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "Can't read file", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	path := filepath.Join("projects", projectName, "files", handler.Filename) /* Hardcoded */
+
+	dst, err := os.Create(path)
+	if err != nil {
+		http.Error(w, "Can't save file", http.StatusInternalServerError)
+		return
+	}
+	defer dst.Close()
+
+	_, err = io.Copy(dst, file)
+	if err != nil {
+		http.Error(w, "Can't read to file", http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprintf(w, `{"message": "Uploaded file to %s"}`, path)
 }
