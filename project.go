@@ -162,6 +162,7 @@ func getProjectDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	globalDocument = crdt.DocumentFromStr(string(document))
 	_, err = w.Write(document)
 	if err != nil {
 		errorMessage := fmt.Sprintf("Failed to write document: %s", err)
@@ -169,7 +170,6 @@ func getProjectDocument(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errorMessage, http.StatusInternalServerError)
 		return
 	}
-	globalDocument = crdt.DocumentFromStr(string(document))
 }
 
 func saveProjectDocument(w http.ResponseWriter, r *http.Request) {

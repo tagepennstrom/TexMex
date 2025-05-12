@@ -2,7 +2,8 @@
     import {basicSetup, EditorView} from "codemirror"
     import { page } from '$app/state'
     import {onMount} from 'svelte'
-    import {EditorState, Transaction} from "@codemirror/state"
+    import {EditorState, Transaction, type TransactionSpec } from "@codemirror/state"
+    import { ViewUpdate } from "@codemirror/view"
     import {StreamLanguage,} from '@codemirror/language'
     import { stex } from "@codemirror/legacy-modes/mode/stex"
     import { editorView as editorViewStore } from "$lib/stores";
@@ -25,40 +26,49 @@
         text: string;   // Tillagd text, tom vid borttagning
     }
 
+    type CoordT = {
+        coordinate: number[];
+        id: number;
+    }
+
+    type CoordChanges = {
+        coordinate: CoordT;
+        operation: string;
+        letter: string;
+    }
+
     type UpdatedDocMessage = {
-        document: string
         cursorIndex: number
         jsonCChanges: string
     }
 
     type Envelope = {
-        Type: string          
-        EditDocMsg: UpdatedDocMessage
+        type: string          
+        editDocMsg: UpdatedDocMessage
     }
 
-    async function applyUpdate(document: string, jsonChanges: string) {
+    async function applyUpdate(jsonChanges: string) {
+        HandleOperation(jsonChanges);
+        const changes: CoordChanges[] = JSON.parse(jsonChanges);
         updateFromCode = true;
-
-        const strDoc: string = HandleOperation(jsonChanges)
-
-        // TODO: Hårdkodad cursor index, byt mot hur det fungerade förut
-        const cursorIndex: number = strDoc.length
-
-        editorView.dispatch({
-            changes: {
-                from: 0,
-                to: editorView.state.doc.length,
-                insert: strDoc,
-            },
-            selection: {
-                anchor: cursorIndex,
-            },
-        });
+        changes.forEach((change) => {
+            const index = CoordinateToIndex(JSON.stringify(change.coordinate));
+            editorView.dispatch({
+                changes: {
+                    from: index,
+                    to: index + change.letter.length,
+                    insert: change.letter,
+                },
+                selection: {
+                    anchor: GetCursorIndex(),
+                },
+            });
+        })
         updateFromCode = false;
     }
 
 
-    function sendChangesToCrdt(tr: Transaction): void {
+    function sendChangesToCrdt(tr: Transaction): TransactionSpec {
         
         const changes: Change[] = [];
         tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
@@ -78,29 +88,64 @@
             cursorIndex,
         )
 
+
         const env: Envelope = {
-            Type: "operation",
-            EditDocMsg: updDocMsg,
+            type: "operation",
+            editDocMsg: updDocMsg,
         }
-
         console.log("Sending envelope:",env)
-
         socket.send(JSON.stringify(env));
 
-        const serverUrl = `http://${location.hostname}:8080`;
-        fetch(`${serverUrl}/projects/${page.params.name}/documents/document.tex`, {
-            method: "PUT",
-            headers: { "Content-Type": "text/plain" },
-            body: updDocMsg.document,
-        })
+
+        const coordChanges: CoordChanges[] = JSON.parse(updDocMsg.jsonCChanges);
+        
+        type TransactionSpecChange = {
+            from: number;
+            to: number;
+            insert: string;
+        };
+
+        const actualChanges: TransactionSpecChange[] = coordChanges.map(change => {
+            const index = CoordinateToIndex(JSON.stringify(change.coordinate));
+            if (change.operation === "delete") {
+                return {
+                    from: index,
+                    to: index + 1,
+                    insert: change.letter,
+                };
+            } else {
+                return {
+                    from: index,
+                    to: index,
+                    insert: change.letter,
+                };
+            }
+        });
+        return {
+            changes: actualChanges,
+            selection: {
+                anchor: updDocMsg.cursorIndex,
+            }
+        };
     }
 
     const BlockLocalChanges = EditorState.transactionFilter.of(tr => {
         if (tr.docChanged && !updateFromCode) {
-            sendChangesToCrdt(tr);
+            return sendChangesToCrdt(tr);
+        } else {
+            return tr;
         }
-        return tr;
     })
+
+    function onUpdate(update: ViewUpdate) {
+        if (updateFromCode) return;
+        const serverUrl = `http://${location.hostname}:8080`;
+        fetch(`${serverUrl}/projects/${page.params.name}/documents/document.tex`, {
+            method: "PUT",
+            headers: { "Content-Type": "text/plain" },
+            body: update.state.doc.toString(),
+        })
+    }
 
     const fixedHeightEditor = EditorView.theme({
         "&": {height: "700px"},
@@ -112,14 +157,32 @@
         StreamLanguage.define(stex),
         fixedHeightEditor,
         BlockLocalChanges,
+        EditorView.updateListener.of(onUpdate),
         EditorView.lineWrapping,
-        autocompletion({ override: [myCompletions] })]
+        autocompletion({ override: [myCompletions] })
+    ]
 
 
     onMount(() => {
         const serverUrl = `http://${location.hostname}:8080`;
-        socket = new WebSocket(`${serverUrl}/editDocWebsocket`);
 
+        fetch(`${serverUrl}/projects/${page.params.name}/documents/document.tex`)
+            .then(res => res.text())
+            .then(text => {
+                // Initialize CodeMirror editor
+                editorView = new EditorView({
+                    state: EditorState.create({
+                        doc: text,
+                        extensions
+                    }),
+                    parent: editor
+                });
+
+                // Spara editorn i store för delning med Toolbar
+                editorViewStore.set(editorView);
+            });
+
+        socket = new WebSocket(`${serverUrl}/editDocWebsocket`);
         socket.addEventListener("message", (event) => {
             const message = JSON.parse(event.data);
             switch (message.type) {
@@ -164,9 +227,7 @@
 
                 case "operation":
                     console.log(message.editDocMsg);
-
-                    let changes = message.editDocMsg.jsonCChanges
-                    applyUpdate(editorView.state.doc.toString(), changes)
+                    applyUpdate(message.editDocMsg.jsonCChanges)
                     break;
 
 
@@ -178,22 +239,6 @@
             }
 
         });
-
-        fetch(`${serverUrl}/projects/${page.params.name}/documents/document.tex`)
-            .then(res => res.text())
-            .then(text => {
-                // Initialize CodeMirror editor
-                editorView = new EditorView({
-                    state: EditorState.create({
-                        doc: text,
-                        extensions
-                    }),
-                    parent: editor
-                });
-
-                // Spara editorn i store för delning med Toolbar
-                editorViewStore.set(editorView);
-            });
     });
 </script>
 

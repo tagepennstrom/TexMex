@@ -73,8 +73,7 @@ func updateDocumentWrap(this js.Value, args []js.Value) any {
 		return nil
 	}
 
-	m := map[string]interface{}{
-		"document":     res.Document,
+	m := map[string]any{
 		"cursorIndex":  res.CursorIndex,
 		"jsonCChanges": string(jsonChanges), // koordinater i json form
 	}
@@ -89,10 +88,21 @@ func handleOperation(this js.Value, args []js.Value) any {
 
 	jsonChange := args[0].String()
 	crdt.DocuMain.HandleCChange(jsonChange)
+	return nil
+}
 
-	strDoc := crdt.DocuMain.ToString()
+func getCursorIndex(this js.Value, args []js.Value) any {
+	return crdt.DocuMain.CursorIndex()
+}
 
-	return strDoc
+func coordinateToIndex(this js.Value, args []js.Value) any {
+	if len(args) != 1 {
+		println("Wrong number of arguments (coordinateToIndex)")
+		return nil
+	}
+
+	coordJson := args[0].String()
+	return crdt.DocuMain.CoordinateToIndex(coordJson)
 }
 
 func debugFeat(this js.Value, args []js.Value) any {
@@ -111,6 +121,8 @@ func registerCallbacks() {
 	js.Global().Set("CRDebug", js.FuncOf(debugFeat))
 	js.Global().Set("LoadState", js.FuncOf(loadState))
 	js.Global().Set("HandleOperation", js.FuncOf(handleOperation))
+	js.Global().Set("GetCursorIndex", js.FuncOf(getCursorIndex))
+	js.Global().Set("CoordinateToIndex", js.FuncOf(coordinateToIndex))
 
 	println("Function callbacks registered")
 }

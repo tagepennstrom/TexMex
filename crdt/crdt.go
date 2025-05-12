@@ -46,7 +46,6 @@ type EditDocMessage struct {
 }
 
 type UpdatedDocMessage struct {
-	Document    string         `json:"document"`
 	CursorIndex int            `json:"cursorIndex"`
 	CChanges    []CoordChanges `json:"coordChanges"`
 }
@@ -112,7 +111,9 @@ func LoadSnapshot(jsonStr string) string {
 
 	loadedDoc := NewDocument()
 
-	for _, node := range toLoad.Textcontent {
+	// skippa dummy element som redan skapas från NewDocument() ovan
+	for i := 1; i < len(toLoad.Textcontent); i++ {
+		node := toLoad.Textcontent[i]
 		newItem := Item{Letter: node.Letter, Location: node.Location, ID: node.ID}
 		loadedDoc.Textcontent.Append(&newItem)
 	}
@@ -167,7 +168,8 @@ func (d *Document) HandleCChange(jsonCChange string) {
 
 }
 
-func applyAndRecordOperations(changes []Change) []CoordChanges {
+func applyAndRecordOperations(changes []Change, cursorIndex int) []CoordChanges {
+	DocuMain.SetCursorAt(cursorIndex)
 
 	var allChanges []CoordChanges
 
@@ -184,14 +186,11 @@ func applyAndRecordOperations(changes []Change) []CoordChanges {
 
 		} else if change.FromA == change.ToA {
 			// INSERT Operation
-			i := 0
-			for _, ch := range change.Text {
+			for i, ch := range change.Text {
 				crd := DocuMain.LoadInsert(string(ch), change.FromB+i, uID)
 
 				change := buildCoordChange(crd, "insert", string(ch))
 				allChanges = append(allChanges, change)
-
-				i++
 			}
 
 		} else {
@@ -227,10 +226,9 @@ func UpdateDocument(changes []Change, cursorIndex int) UpdatedDocMessage {
 		os.Exit(69)
 	}
 
-	allChanges := applyAndRecordOperations(changes)
+	allChanges := applyAndRecordOperations(changes, cursorIndex)
 
 	return UpdatedDocMessage{
-		Document:    DocuMain.ToString(),
 		CursorIndex: DocuMain.CursorIndex(),
 		CChanges:    allChanges,
 	}
@@ -288,7 +286,7 @@ func (doc *Document) SetCursorAt(index int) {
 	i := 0
 	item := doc.Textcontent.Head
 	for item != nil {
-		if i == index+1 {
+		if i == index {
 			doc.CursorPosition = item
 		}
 		item = item.Next
@@ -575,13 +573,45 @@ func (d *Document) IndexToCoordinate(index int) (Item, bool) {
 	} else {
 
 		current := d.Textcontent.Head
-		for i := 0; i < index+1; i++ {
+		for i := 0; i < index; i++ {
 			current = current.Next
 		}
 
 		newPosition = *current
 	}
 	return newPosition, atEnd
+}
+
+func coordEqual(a CoordT, b CoordT) bool {
+	if a.ID != b.ID {
+		return false
+	}
+	if len(a.Coordinate) != len(b.Coordinate) {
+		return false
+	}
+
+	for i := range a.Coordinate {
+		if a.Coordinate[i] != b.Coordinate[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func (d *Document) CoordinateToIndex(coordJson string) int {
+	var coord CoordT
+	json.Unmarshal([]byte(coordJson), &coord)
+	i := 0
+	for current := DocuMain.Textcontent.Head; current != nil; current = current.Next {
+		if coordEqual(current.Location, coord) || current.Location.Coordinate[0] > coord.Coordinate[0] {
+			return i
+		}
+		if current.Letter != "" {
+			i++
+		}
+	}
+	println("coordinate doesn't exist");
+	return i
 }
 
 func (d *Document) LoadInsert(letter string, index int, uID int) CoordT {
@@ -644,8 +674,6 @@ func (d *Document) DeleteAtIndex(index int) CoordT {
 func (d *Document) Delete() CoordT {
 	if d.CursorPosition.Prev != nil {
 		savedCursor := d.CursorPosition
-
-		d.CursorBackwards()
 
 		deletedCoordinate := savedCursor.Location
 

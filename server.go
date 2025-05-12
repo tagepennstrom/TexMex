@@ -26,7 +26,6 @@ type Change struct {
 }
 
 type EditDocMessage struct {
-	Document     string `json:"document"`
 	CursorIndex  int    `json:"cursorIndex"`
 	JsonCChanges string `json:"jsonCChanges"`
 }
