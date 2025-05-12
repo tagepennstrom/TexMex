@@ -195,14 +195,6 @@ func middleware(handlerFunc http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
-
-	// todo: det nedan är tillfälligt för att testa crdt synkning
-	// ***
-	filler := "ABC"
-	globalDocument = crdt.DocumentFromStr(filler)
-
-	// ***
-
 	const port = "8080"
 	ip, _ := getLocalIP()
 	serverAddress := fmt.Sprintf("%s:%s", ip, port)

@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+
+	"websocket-server/crdt"
 )
 
 type Project struct {
@@ -167,6 +169,7 @@ func getProjectDocument(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errorMessage, http.StatusInternalServerError)
 		return
 	}
+	globalDocument = crdt.DocumentFromStr(string(document))
 }
 
 func saveProjectDocument(w http.ResponseWriter, r *http.Request) {
