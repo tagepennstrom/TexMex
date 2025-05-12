@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 )
 
 type Project struct {
@@ -17,6 +18,10 @@ type Project struct {
 
 type Document struct {
 	Name string `json:"name"`
+}
+
+type AllFiles struct {
+	Name string `json"name"`
 }
 
 const projectsDir = "projects"
@@ -246,4 +251,34 @@ func getProjectPdf(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errorMessage, http.StatusInternalServerError)
 		return
 	}
+}
+
+func getFilesFromProject(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func uploadFileToProject(w http.ResponseWriter, r *http.Request) {
+	file, handler, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "Can't read file", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	savePath := filepath.Join("projects/Test2/files", handler.Filename) /* Hardcoded */
+
+	dst, err := os.Create(savePath)
+	if err != nil {
+		http.Error(w, "Can't save file", http.StatusInternalServerError)
+		return
+	}
+	defer dst.Close()
+
+	_, err = io.Copy(dst, file)
+	if err != nil {
+		http.Error(w, "Can't read to file", http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprintf(w, `{"message": "Uploaded file to %s"}`, savePath)
 }
