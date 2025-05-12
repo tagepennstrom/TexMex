@@ -5,6 +5,8 @@
         import Editor from './Editor.svelte';
         import Footer from './Footer.svelte';
         import Toolbar from './Toolbar.svelte';
+	import { showFilesModal } from '$lib/stores';
+	import FilesModal from '$lib/FilesModal.svelte';
 
 
         let compileError = $state(0);    
@@ -90,6 +92,11 @@
             {/if}
         </div>
         <div class="content">
+            {#if showFilesModal}
+                <div>
+                    <FilesModal/>
+                </div>
+            {/if}
             <Editor />
             <Viewer {pdfUrl} {compileCount}/>
         </div>

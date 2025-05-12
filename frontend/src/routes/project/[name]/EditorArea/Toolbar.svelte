@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { insertBold, insertItalic, insertUnderline, insertNewline } from '$lib/index';
+    import { insertBold, insertItalic, insertUnderline, insertNewline, toggleFilesModal } from '$lib/index';
     import { onMount, onDestroy } from 'svelte';
 
     let { compile } = $props()
@@ -38,7 +38,9 @@
 </script>
 
 <div class="Toolbar">
-    <button class="Bold" onclick={insertBold} title ="Bold (crtl + b)"><strong>B</strong></button>
+    
+    <button class="Files" onclick={toggleFilesModal} title ="Show project files">Files</button>
+    <button class="Bold" onclick={insertBold} title ="Bold (crtl + b)"><strong>B</strong></button> 
     <button class="Italic" onclick={insertItalic} title="Italic (crtl + i)"><em>I</em></button>
     <button class="Underline" onclick={insertUnderline} title="Underline (crtl + u)"><u>U</u></button>
     <button class="Newline" onclick={insertNewline} title="New line (crtl + l)">\n</button>
@@ -55,6 +57,15 @@
     background-color: #e0f7fa;
     border-bottom: 1px solid #ccc;
     align-items: center;
+    }
+
+    .Files {
+        padding: 10px 20px;
+        background-color: rgb(246, 137, 4);
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
     }
 
     .Bold {
