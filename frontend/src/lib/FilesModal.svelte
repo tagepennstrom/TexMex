@@ -16,7 +16,7 @@
             console.error("Projectname is null")
             return;
         }
-        
+  
         if (!files || files.length === 0) {
             console.error("No files selected");
             return;
@@ -50,9 +50,15 @@
 <div class="backdrop">
     <div class="modal">
         <button class="close" onclick={toggleFilesModal}>Close</button>
-        <input bind:files type="file" id="file"/>
+        <input bind:files type="file" id="file" multiple/>
         <label for="file">Upload File</label>
         <button onclick="{uploadFiles}">Upload</button>
+        {#if files}
+	        <h2>Selected files:</h2>
+	        {#each Array.from(files) as file}
+		        <p>{file.name} ({(file.size / (1024)).toFixed(0)} KB)</p>
+	        {/each}
+        {/if}
     </div>
 </div>
 {/if}
