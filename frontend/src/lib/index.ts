@@ -1,7 +1,11 @@
 import { get } from 'svelte/store';
 import { editorView } from "$lib/stores";
+import { showFilesModal } from '$lib/stores';
 
 
+export const toggleFilesModal = () => {
+    showFilesModal.update(value => !value);
+};
 
 export function insertBold() {
     const view = get(editorView);
