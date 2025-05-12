@@ -43,9 +43,21 @@
     }
 
     function messageCleanUp(errorMessages: string[]): string[] {
-        let newMessages : string[] = [];
-        newMessages = errorMessages;
+        let newMessages = errorMessages;
+       
+        //Manipulera varje string individuellt
+        for (let i = 0; i < newMessages.length; i++){
+            let temp = newMessages[i];
 
+            //syntax fel
+            if(temp.includes("! Undefined control sequence.")){
+                temp = temp.replace("! Undefined control sequence.", "Incorrect LaTeX syntax");
+                            //Byter ut 1.4 t.e.x till bara "found at line 4"
+                temp = temp.replace(/^l\.(\d+)/m, "found at line $1:");
+            }
+
+            newMessages[i] = temp;
+        }
         return newMessages;
     }
 
