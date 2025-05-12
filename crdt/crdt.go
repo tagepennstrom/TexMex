@@ -155,6 +155,7 @@ func (d *Document) HandleCChange(jsonCChange string) {
 		switch change.Operation {
 
 		case "delete":
+			fmt.Println(" ** del at:", coord)
 			d.DeleteAtCoordinate(coord)
 			break
 
@@ -176,7 +177,10 @@ func applyAndRecordOperations(changes []Change) []CoordChanges {
 		if change.Text == "" {
 			// DELETE Operation
 			for i := change.ToA; i > change.FromA; i-- {
+				println("Before delete")
 				crd := DocuMain.DeleteAtIndex(i)
+				println("CRD:", crd.Coordinate[0])
+				println("After delete")
 
 				change := buildCoordChange(crd, "delete", "")
 				allChanges = append(allChanges, change)
@@ -288,7 +292,7 @@ func (doc *Document) SetCursorAt(index int) {
 	i := 0
 	item := doc.Textcontent.Head
 	for item != nil {
-		if i == index {
+		if i == index+1 {
 			doc.CursorPosition = item
 		}
 		item = item.Next
@@ -303,9 +307,13 @@ func (doc *Document) InsertAtCoordinate(c CoordT, l string) {
 }
 
 func (doc *Document) DeleteAtCoordinate(c CoordT) {
-	prev := findPrevItem(c, doc.Textcontent).Next
+	toDel := findPrevItem(c, doc.Textcontent).Next // blir inte prev då det är samma coord
 
-	toDel := prev.Next
+	prev := toDel.Prev
+
+	fmt.Println("prev:", prev.Letter, prev.Location.Coordinate)
+
+	fmt.Println("todel:", toDel.Letter, toDel.Location.Coordinate)
 
 	// forward link
 	prev.Next = toDel.Next
@@ -362,10 +370,10 @@ func CompareIndexes(c1 CoordT, c2 CoordT) bool {
 		} else if c2.ID < c1.ID {
 			return false
 		} else {
-			fmt.Errorf("Coordinates are identical")
-			println("Error: Coordinates can't have the same size and ID. This should not happen!") // Har fått det felet
-			fmt.Println(c1.Coordinate, "+", c1.ID, "vs", c2.Coordinate, "+", c2.ID)
+			println("This should be a deletion. (Compare indexes)") // Har fått det felet
+			//fmt.Println(c1.Coordinate, "+", c1.ID, "vs", c2.Coordinate, "+", c2.ID)
 			//os.Exit(1)
+			return true
 		}
 
 	}
@@ -627,6 +635,7 @@ func (d *Document) MoveCursor(index int) {
 
 func (d *Document) DeleteAtIndex(index int) CoordT {
 	cursorIndex := d.CursorIndex()
+
 	d.SetCursorAt(index)
 	deletedCoord := d.Delete()
 
