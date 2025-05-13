@@ -11,6 +11,10 @@
 
     let projects: Project[] = $state([]);
 
+    let showCreateProjectPopup = $state(false);
+    let newProjectName = $state('');
+    let createProjectPopupError = $state('');
+
     onMount(() => {
         const serverUrl = `http://${location.hostname}:8080`;
         fetch(`${serverUrl}/projects`)
@@ -22,38 +26,67 @@
         window.location.href = "/SavedProjects";
     }
 
-
-    async function startNewProject() {
+    async function createNewProject() {
+        createProjectPopupError = '';
         const serverUrl = `http://${location.hostname}:8080`;
-        let projectNr = 1;
-        while (projectNr < 20) {
-            const projectName = 'project-' + projectNr;
-            const res = await fetch(`${serverUrl}/projects/${projectName}`, {
-                method: "POST",
-            });
-            if (!res.ok) {
-                console.error(await res.text());
-                projectNr++;
-            } else {
-                window.location.href = `/project/${projectName}/EditorArea`;
-                return;
-            }
-        }
+        const res = await fetch(`${serverUrl}/projects/${newProjectName}`, {
+            method: "POST",
+        });
+        if (!res.ok) {
+            const errMsg = await res.text();
+            createProjectPopupError = errMsg;
+            return;
+        } 
+        const newProjectUrl = `/project/${newProjectName}/EditorArea`; 
+        newProjectName = '';
+        showCreateProjectPopup = false;
+        window.location.href = newProjectUrl;
     }
 
+    function closeCreateProjectPopup() {
+        showCreateProjectPopup = false;
+        newProjectName = '';
+        createProjectPopupError = '';
+    }
+
+    function focusElem(elem: HTMLElement) {
+        elem.focus(); 
+    }
 </script>
 
 <div class="MyProjects">
     <div class="title-container">
         <h1 class="cal-sans-regular">Latest projects</h1>
-        <button class="add-button outfit-500" onclick={startNewProject}>
+        <button class="add-button outfit-500" onclick={() => showCreateProjectPopup = true}>
             <span class="icon">+</span>
             <span class="label">New project</span>
         </button>
 
     </div>
-    <hr>
 
+    {#if showCreateProjectPopup}
+        <div id='create-new-project-popup-overlay'>
+            <div id='create-new-project-popup' class='outfit-500'>
+                <div id='header'>
+                    <h1>New Project</h1>
+                    <svg id='closeBtn' onclick={closeCreateProjectPopup} class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                      <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 9-6 6m0-6 6 6m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                    </svg>
+                </div>
+                <hr>
+                <input type='text' placeholder='Project Name' bind:value={newProjectName} required use:focusElem>
+                {#if createProjectPopupError !== ''}
+                    <div id='project-name-error-msg'>
+                        <span>{createProjectPopupError}</span>
+                    </div>
+                {/if}
+                <hr>
+                <button onclick={createNewProject} disabled={newProjectName === ''} id='submitBtn' class='outfit-300'>Create</button>
+            </div>
+        </div>
+    {/if}
+
+    <hr id='projects-separator'>
 
     <div class="projects">
         {#if projects.length === 0}
@@ -178,9 +211,95 @@
         font-weight: bold;
         }
 
+    #create-new-project-popup-overlay {
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0,0,0,0.5);
+        z-index: 2;
+    }
 
+    #create-new-project-popup {
+        background-color: white;
+        position: fixed;
+        top: 25%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        box-shadow: 2px 3px 5px #999;
+        width: 25%;
+    }
 
-    hr {
+    #create-new-project-popup > #header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 0 1rem;
+    }
+
+    #create-new-project-popup > #header > h1 {
+        display: inline-block;
+        font-size: 1.5em;
+    }
+
+    #create-new-project-popup > #header > #closeBtn {
+        cursor: pointer;
+    }
+
+    #create-new-project-popup > #header > #closeBtn:hover {
+        fill: #fa0000;
+    }
+
+    #create-new-project-popup > input {
+        display: block;
+        font-size: 1rem;
+        margin: 0 1rem;
+        width: calc(100% - 2rem);
+        padding: 6px 8px;
+        box-sizing: border-box;
+        border: 1px solid #677283;
+        border-radius: 4px;
+        transition: border-color .15s ease-in-out;
+        outline: none;
+    }
+
+    #create-new-project-popup > input:focus {
+        border-color: #366cbf
+    }
+
+    #create-new-project-popup > #project-name-error-msg {
+        margin: 0 1rem;
+        color: red;
+    }
+
+    #create-new-project-popup > #submitBtn {
+        background-color: #34a93c;
+        color: #fff;
+        margin: 0.5rem 1rem;
+        padding: 10px 25px;
+        border: 1px solid #34a93c;
+        border-radius: 4px;
+        box-shadow: rgba(0, 0, 0, .2) 0 2px 4px 0;
+        font-size: 16px;
+    }
+
+    #create-new-project-popup > #submitBtn:enabled {
+        cursor: pointer;
+    }
+
+    #create-new-project-popup > #submitBtn:hover:enabled {
+        background-color: #168e48;
+    }
+
+    #create-new-project-popup > #submitBtn:disabled {
+        background-color: #8FC493;
+        border: none;
+    }
+
+    #projects-separator {
         border: none;
         border-top: 2px solid #393939;
         margin: 20px 0 0 0;

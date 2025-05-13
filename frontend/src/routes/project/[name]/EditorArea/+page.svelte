@@ -5,13 +5,22 @@
         import Editor from './Editor.svelte';
         import Footer from './Footer.svelte';
         import Toolbar from './Toolbar.svelte';
+	import { showFilesModal } from '$lib/stores';
+	import FilesModal from '$lib/FilesModal.svelte';
+	import { onMount } from 'svelte';
 
 
-        let compileError = $state(0);    
-        let pdfUrl = $state("");
-        let compileCount = $state(0);
-        let errorMessage : string[] = $state([]);
-        let currentErrorIndex = $state(0);
+    let compileError = $state(0);    
+    let pdfUrl = $state("");
+    let compileCount = $state(0);
+    let errorMessage : string[] = $state([]);
+    let currentErrorIndex = $state(0);
+    let projectName = $state<String | null>(null);
+
+    onMount(() => {
+        projectName = page.params.name;
+        console.log("Project name is: ", projectName);
+    })
 
     function messageExtracting(logText: string): string[] {
         
@@ -65,11 +74,13 @@
         compileError = 0;
         errorMessage = []
         const serverUrl = `http://${location.hostname}:8080`;
-        const res = await fetch(`${serverUrl}/projects/${page.params.name}/pdf`);
+        const res = await fetch(`${serverUrl}/projects/${projectName}/pdf`);
+
+        
 
         if (!res.ok) {
             //fetch projects logFile
-            const logText = await fetch(`${serverUrl}/projects/${page.params.name}/documents/document.log`)
+            const logText = await fetch(`${serverUrl}/projects/${projectName}/documents/document.log`)
                     .then(response => response.text())
                     
             console.error("Failed to compile LaTeX:", await res.text());
@@ -88,13 +99,16 @@
 
 
 
-<div class="page-container">
-    <Header />
-
-    <div class="toolbar">
-        <Toolbar {compile} />
-
-        {#if errorMessage.length > 0}
+    <div class="page-container">
+        <Header/>
+        {#if showFilesModal}
+            <div>
+                <FilesModal {projectName}/>
+            </div>
+        {/if}
+        <div class="toolbar">
+            <Toolbar {compile} />
+               {#if errorMessage.length > 0}
             <div class="error-console">
                 <strong>
                     Compiling error {errorMessage.length > 1 ? `(Error ${currentErrorIndex + 1} of ${errorMessage.length})` : ''}:
@@ -116,15 +130,13 @@
             </div>
         {/if}
     </div> 
-
-    <div class="content">
-        <Editor />
-        <Viewer {pdfUrl} {compileCount} />
+    
+        <div class="content">
+            <Editor />
+            <Viewer {pdfUrl} {compileCount}/>
+        </div>
+        <Footer/>
     </div>
-
-    <Footer />
-</div>
-
 
     <style>
         .page-container {
