@@ -24,10 +24,11 @@
 
     function messageExtracting(logText: string): string[] {
         
-        const regex = /(^!.*(?:\n(?!\s*$).*)*)/gm;
+        const regex = /(^!.*(?:\n(?!\s*$).*)*)|(^Runaway argument\?.*(?:\n(?!\s*$).*)*)/gmi;
         let matches = [];
         let match;
         let len = 0;
+        currentErrorIndex = 0;
             
         while ((match = regex.exec(logText)) !== null) {
             let errorMessage = match[0].trim();
@@ -36,12 +37,10 @@
         }
         
         console.log(matches[matches.length -1])
-        //ta bort de två sista elementen av arrayn då de inte är användbara
+        //ta bort det sista elementen av arrayn då det inte är användbart
         if (matches[len -1] == "!  ==> Fatal error occurred, no output PDF file produced!") {
             compileError = 1;
             matches.pop();  // Remove the last element
-            matches.pop();  // Remove the second-to-last element
-            
             
         } else {
             compileError = 2;
@@ -60,11 +59,39 @@
 
             //syntax fel
             if(temp.includes("! Undefined control sequence.")){
+                let brackets = false;
                 temp = temp.replace("! Undefined control sequence.", "Incorrect LaTeX syntax");
-                            //Byter ut 1.4 t.e.x till bara "found at line 4"
+                //Kollar om orginal meddelandet innehåller {}
+                if(temp.includes("{}")){
+                    brackets = true 
+                }
+
+                //Byter ut 1.4 t.e.x till bara "found at line 4"
                 temp = temp.replace(/^l\.(\d+)/m, "found at line $1:");
+
+                const match = temp.match(/(found at line \d+:.*?\\\w+)/s);
+                //Tar bort allt efter \(funktion)
+                if (match) {
+                    temp = match[1]; 
+                }
+                //Lägger tillbaka {}
+                temp += brackets === true ? "{}" : "";            
             }
 
+            //fel användning av end{}
+            if(temp.includes("Runaway argument?")){
+                temp = temp.replace(/Runaway argument\?\n\{(\w+)/m, 
+                "You forgot to close \\end{$1\nIt should be: \\end{$1}");
+
+                const lines = temp.split("\n");
+                temp = lines.slice(0, 2).join("\n");
+                //temp = "Somewhere you forgot to close your end function."
+            }
+
+            //Inte end{document}
+            if(temp.includes("! Emergency stop.")){
+                temp = "Document was not ended correctly, either forgotten or misspelled \nshould be \\end{document}"
+            }
             newMessages[i] = temp;
         }
         return newMessages;
@@ -130,7 +157,7 @@
             </div>
         {/if}
     </div> 
-    
+
         <div class="content">
             <Editor />
             <Viewer {pdfUrl} {compileCount}/>
