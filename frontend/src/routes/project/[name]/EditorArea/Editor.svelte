@@ -83,6 +83,23 @@
         updateFromCode = false;
     }
 
+    function isInsert(coordChanges: CoordChanges[]) {
+        for (const change of coordChanges) {
+            if (change.operation !== "insert") {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function isDelete(coordChanges: CoordChanges[]) {
+        for (const change of coordChanges) {
+            if (change.operation !== "delete") {
+                return false;
+            }
+        }
+        return true;
+    }
 
     function sendChangesToCrdt(tr: Transaction): TransactionSpec {
         
@@ -121,22 +138,47 @@
             insert: string;
         };
 
-        const actualChanges: TransactionSpecChange[] = coordChanges.map(change => {
-            const index = CoordinateToIndex(JSON.stringify(change.coordinate));
-            if (change.operation === "delete") {
-                return {
-                    from: index,
-                    to: index + 1,
+        const actualChanges: TransactionSpecChange[] = [];
+        if (isInsert(coordChanges)) {
+            for (let i = 0; i < coordChanges.length; i++) {
+                const change = coordChanges[i];
+                const index = CoordinateToIndex(JSON.stringify(change.coordinate));
+                actualChanges.push({
+                    from: index - i,
+                    to: index - i,
                     insert: change.letter,
-                };
-            } else {
-                return {
-                    from: index,
-                    to: index,
-                    insert: change.letter,
-                };
+                });
             }
-        });
+        } else if (isDelete(coordChanges)) {
+            for (let i = 0; i < coordChanges.length; i++) {
+                const change = coordChanges[i];
+                const index = CoordinateToIndex(JSON.stringify(change.coordinate));
+                actualChanges.push({
+                    from: index + i,
+                    to: index + i + 1,
+                    insert: change.letter,
+                });
+            }
+        } else {
+			// SELECT AND REPLACE Operation
+            // TODO: fungerar inte
+            for (const change of coordChanges) {
+                const index = CoordinateToIndex(JSON.stringify(change.coordinate));
+                if (change.operation === "delete") {
+                    actualChanges.push({
+                        from: index,
+                        to: index + 1,
+                        insert: change.letter,
+                    });
+                } else {
+                    actualChanges.push({
+                        from: index,
+                        to: index,
+                        insert: change.letter,
+                    });
+                }
+            }
+        }
         return {
             changes: actualChanges,
             selection: {
