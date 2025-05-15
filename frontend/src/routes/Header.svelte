@@ -43,8 +43,10 @@
         display: flex;
         padding: 1rem 0;
         flex-direction: row;
-        background-color: #d8f5c5;
+        background-color: #ceff6c;
         justify-content: space-between;
+        box-shadow: 1px 5px 7px -5px rgba(0,0,0,0.15);
+        z-index: 2;
     }
 
     .tm-logo{
