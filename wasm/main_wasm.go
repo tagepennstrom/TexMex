@@ -83,12 +83,14 @@ func updateDocumentWrap(this js.Value, args []js.Value) any {
 func handleOperation(this js.Value, args []js.Value) any {
 	if len(args) != 1 {
 		println("Wrong number of arguments (HandleOperation)")
-		return nil
+		return ""
 	}
 
 	jsonChange := args[0].String()
-	crdt.DocuMain.HandleCChange(jsonChange)
-	return nil
+
+	jsonIndexChanges := crdt.DocuMain.HandleCChange(jsonChange)
+
+	return jsonIndexChanges
 }
 
 func getCursorIndex(this js.Value, args []js.Value) any {
@@ -102,16 +104,27 @@ func coordinateToIndex(this js.Value, args []js.Value) any {
 	}
 
 	coordJson := args[0].String()
-	return crdt.DocuMain.CoordinateToIndex(coordJson)
+	return crdt.DocuMain.CoordinateToIndex2(coordJson)
 }
 
-func debugFeat(this js.Value, args []js.Value) any {
+func crdtToString(this js.Value, args []js.Value) any {
 	if len(args) != 0 {
 		println("Wrong number of arguments [ CRDebug() ]")
 		return nil
 	}
 
-	crdt.PrintDocument(true)
+	return crdt.DocuMain.ToString()
+}
+
+func debugFeat(this js.Value, args []js.Value) any {
+	if len(args) != 1 {
+		println("Wrong number of arguments [ CRDebug() ]")
+		return nil
+	}
+
+	verbose := args[0].Bool()
+
+	crdt.PrintDocument(verbose)
 	return nil
 }
 
@@ -123,6 +136,7 @@ func registerCallbacks() {
 	js.Global().Set("HandleOperation", js.FuncOf(handleOperation))
 	js.Global().Set("GetCursorIndex", js.FuncOf(getCursorIndex))
 	js.Global().Set("CoordinateToIndex", js.FuncOf(coordinateToIndex))
+	js.Global().Set("crdtToString", js.FuncOf(crdtToString))
 
 	println("Function callbacks registered")
 }

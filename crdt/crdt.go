@@ -144,11 +144,13 @@ func buildCoordChange(crd CoordT, op string, ltr string) CoordChanges {
 	}
 }
 
-func (d *Document) HandleCChange(jsonCChange string) {
+func (d *Document) HandleCChange(jsonCChange string) string {
 
 	var cChanges []CoordChanges
 	c := []byte(jsonCChange)
 	json.Unmarshal(c, &cChanges)
+
+	var iChange []Change
 
 	for _, change := range cChanges {
 		coord := change.Coordinate
@@ -156,15 +158,39 @@ func (d *Document) HandleCChange(jsonCChange string) {
 		switch change.Operation {
 
 		case "delete":
-			d.DeleteAtCoordinate(coord)
+			i := d.DeleteAtCoordinate(coord)
+
+			change := Change{
+				FromA: -1,
+				ToA:   -1,
+				FromB: i,
+				ToB:   i + 1,
+				Text:  "",
+			}
+
+			iChange = append(iChange, change)
 			break
 
 		case "insert":
-			d.InsertAtCoordinate(coord, change.Letter)
+			i := d.InsertAtCoordinate(coord, change.Letter)
+
+			change := Change{
+				FromA: -1,
+				ToA:   -1,
+				FromB: i,
+				ToB:   i,
+				Text:  change.Letter,
+			}
+			iChange = append(iChange, change)
+
 			break
 
 		}
 	}
+
+	bytearray, _ := json.Marshal(iChange)
+
+	return string(bytearray)
 
 }
 
@@ -294,15 +320,16 @@ func (doc *Document) SetCursorAt(index int) {
 	}
 }
 
-func (doc *Document) InsertAtCoordinate(c CoordT, l string) {
+func (doc *Document) InsertAtCoordinate(c CoordT, l string) int {
 
-	doc.Textcontent = Insertion(l, c, doc.Textcontent, c.ID)
-
+	var index int
+	doc.Textcontent, index = Insertion(l, c, doc.Textcontent, c.ID)
+	return index
 }
 
-func (doc *Document) DeleteAtCoordinate(c CoordT) {
-	toDel := findPrevItem(c, doc.Textcontent).Next // blir inte prev då det är samma coord
-
+func (doc *Document) DeleteAtCoordinate(c CoordT) int {
+	temp, index := findPrevItem(c, doc.Textcontent) // blir inte prev då det är samma coord
+	toDel := temp.Next
 	prev := toDel.Prev
 
 	// forward link
@@ -316,6 +343,7 @@ func (doc *Document) DeleteAtCoordinate(c CoordT) {
 	}
 
 	doc.Textcontent.Length--
+	return index
 }
 
 func (ll *LinkedList) Append(newItem *Item) {
@@ -448,22 +476,24 @@ func findIntermediateCoordinate(pCoord CoordT, nCoord CoordT) []int {
 	return newCoordinate
 }
 
-func findPrevItem(insertionCoord CoordT, db LinkedList) *Item {
+func findPrevItem(insertionCoord CoordT, db LinkedList) (*Item, int) {
 
 	prev := db.Head
+	index := 0
 	for prev.Next != nil {
 		if CompareIndexes(prev.Next.Location, insertionCoord) {
 			break
 		} else {
+			index++
 			prev = prev.Next
 		}
 	}
-	return prev
+	return prev, index
 }
 
-func Insertion(letter string, coordinate CoordT, db LinkedList, uID int) LinkedList {
+func Insertion(letter string, coordinate CoordT, db LinkedList, uID int) (LinkedList, int) {
 
-	prevItem := findPrevItem(coordinate, db)
+	prevItem, i := findPrevItem(coordinate, db)
 
 	newItem := Item{Letter: letter, Location: coordinate, ID: uID} //prev och next
 	db.Length++
@@ -472,7 +502,7 @@ func Insertion(letter string, coordinate CoordT, db LinkedList, uID int) LinkedL
 	nextItem := prevItem.Next
 	if nextItem == nil {
 		db.Append(&newItem)
-		return db
+		return db, i
 	}
 
 	prevItem.Next = &newItem
@@ -481,11 +511,11 @@ func Insertion(letter string, coordinate CoordT, db LinkedList, uID int) LinkedL
 	nextItem.Prev = &newItem
 	newItem.Next = nextItem
 
-	return db
+	return db, i
 }
 
 func Deletion(coordinate CoordT, db LinkedList) LinkedList {
-	prevItem := findPrevItem(coordinate, db)
+	prevItem, _ := findPrevItem(coordinate, db)
 
 	itemToRemove := prevItem.Next
 
@@ -531,7 +561,7 @@ func (d *Document) findInsertCoord(uID int) CoordT {
 
 func (d *Document) Insert(letter string, uID int) {
 	location := d.findInsertCoord(uID)
-	d.Textcontent = Insertion(letter, location, d.Textcontent, uID)
+	d.Textcontent, _ = Insertion(letter, location, d.Textcontent, uID)
 	d.CursorForward()
 }
 
@@ -610,7 +640,25 @@ func (d *Document) CoordinateToIndex(coordJson string) int {
 			i++
 		}
 	}
-	println("coordinate doesn't exist");
+	println("coordinate doesn't exist")
+	return i
+}
+
+func (d *Document) CoordinateToIndex2(coordJson string) int {
+	var coordSearching CoordT
+	json.Unmarshal([]byte(coordJson), &coordSearching)
+	i := 0
+
+	cur := d.Textcontent.Head
+
+	for cur != nil {
+		if CompareIndexes(cur.Location, coordSearching) {
+			return i
+		}
+		cur = cur.Next
+		i++
+	}
+
 	return i
 }
 
@@ -630,7 +678,7 @@ func (d *Document) LoadInsert(letter string, index int, uID int) CoordT {
 		}
 	}
 
-	d.Textcontent = Insertion(letter, location, d.Textcontent, uID)
+	d.Textcontent, _ = Insertion(letter, location, d.Textcontent, uID)
 	if d.CursorIndex() == index {
 		d.CursorForward()
 	}

@@ -48,37 +48,33 @@
     }
 
     async function applyUpdate(jsonChanges: string) {
-        HandleOperation(jsonChanges);
-        const changes: CoordChanges[] = JSON.parse(jsonChanges);
+        const jsonIndexChanges: string = HandleOperation(jsonChanges);
+        const iChanges: Change[] = JSON.parse(jsonIndexChanges)
+
         updateFromCode = true;
-        changes.forEach((change) => {
-            const index = CoordinateToIndex(JSON.stringify(change.coordinate));
+
+        iChanges.forEach((change) => {
             const cursorPos = editorView.state.selection.main.anchor;
-            if (change.operation == "insert") {
-                editorView.dispatch({
-                    changes: {
-                        from: index,
-                        to: index,
-                        insert: change.letter,
-                    },
-                    selection: {
-                        anchor: cursorPos > index ? cursorPos + 1 : cursorPos,
-                    },
-                });
-            } else if (change.operation == "delete") {
-                editorView.dispatch({
-                    changes: {
-                        from: index,
-                        to: index + 1,
-                        insert: change.letter,
-                    },
-                    selection: {
-                        anchor: cursorPos > index ? cursorPos - 1 : cursorPos,
-                    },
-                });
+
+            let newCursor: number = 0;
+
+            if (change.text == "") {
+                newCursor = cursorPos > change.fromB ? cursorPos - 1 : cursorPos
+                
             } else {
-                console.log("unsupported operation type");
+                newCursor = cursorPos > change.fromB ? cursorPos + 1 : cursorPos
             }
+
+            editorView.dispatch({
+                    changes: {
+                        from: change.fromB,
+                        to: change.toB,
+                        insert: change.text,
+                    },
+                    selection: {
+                        anchor: newCursor
+                    },
+                });
         })
         updateFromCode = false;
     }
@@ -100,6 +96,17 @@
         }
         return true;
     }
+
+    function totalDeletes(coordChanges: CoordChanges[]) {
+        let i = 0;
+        for (const change of coordChanges) {
+            if (change.operation == "delete") {
+                i++
+            }
+        }
+        return i;
+    }
+
 
     function sendChangesToCrdt(tr: Transaction): TransactionSpec {
         
@@ -129,7 +136,7 @@
         console.log("Sending envelope:",env)
         socket.send(JSON.stringify(env));
 
-
+        
         const coordChanges: CoordChanges[] = JSON.parse(updDocMsg.jsonCChanges);
         
         type TransactionSpecChange = {
@@ -138,11 +145,27 @@
             insert: string;
         };
 
+        const s: TransactionSpecChange = {
+            from: 1,
+            to:1,
+            insert:""
+        }
+
+        return {
+            changes: s,
+            selection: {
+                anchor: 0,
+            }
+        };
+        
+
+        let newCursorPos: number = updDocMsg.cursorIndex
+
         const actualChanges: TransactionSpecChange[] = [];
         if (isInsert(coordChanges)) {
             for (let i = 0; i < coordChanges.length; i++) {
                 const change = coordChanges[i];
-                const index = CoordinateToIndex(JSON.stringify(change.coordinate));
+                const index = CoordinateToIndex(JSON.stringify(change.coordinate))-1;
                 actualChanges.push({
                     from: index - i,
                     to: index - i,
@@ -152,47 +175,70 @@
         } else if (isDelete(coordChanges)) {
             for (let i = 0; i < coordChanges.length; i++) {
                 const change = coordChanges[i];
-                const index = CoordinateToIndex(JSON.stringify(change.coordinate));
+                const index = CoordinateToIndex(JSON.stringify(change.coordinate)) - 1;
                 actualChanges.push({
                     from: index + i,
                     to: index + i + 1,
-                    insert: change.letter,
+                    insert: "",
                 });
             }
         } else {
-			// SELECT AND REPLACE Operation
+            // SELECT AND REPLACE Operation
             // TODO: fungerar inte
-            for (const change of coordChanges) {
-                const index = CoordinateToIndex(JSON.stringify(change.coordinate));
-                if (change.operation === "delete") {
-                    actualChanges.push({
-                        from: index,
-                        to: index + 1,
-                        insert: change.letter,
-                    });
-                } else {
-                    actualChanges.push({
-                        from: index,
-                        to: index,
-                        insert: change.letter,
-                    });
+
+            let tot: number = totalDeletes(coordChanges)
+            
+            CRDebug(true)
+
+            for (let i = 0; i < tot; i++) {
+                const change = coordChanges[i];
+                let index = CoordinateToIndex(JSON.stringify(change.coordinate)) -2;
+                if (index == -1) {
+                    index = 0;
                 }
+
+                console.log("sel and del - i",i,"ind:",index,"pos", index + i, "coord:", change.coordinate.coord)
+                actualChanges.push({
+                    from: index + i,
+                    to: index + i + 1,
+                    insert: "",
+                });
             }
+
+            for (let i = 0; i < coordChanges.length - tot; i++) {
+                const change = coordChanges[i + tot];
+                
+                let index = CoordinateToIndex(JSON.stringify(change.coordinate))-1;
+
+                console.log("sel and ins:",i,"at:",index, "is:", change.letter)
+                continue
+                actualChanges.push({
+                    from: index - i,
+                    to: index - i,
+                    insert: change.letter,
+                });
+            }
+            
+            for (let i = 0; i < actualChanges.length; i++){
+                console.log(actualChanges[i])
+            }
+            newCursorPos = 0
+            
         }
+
         return {
             changes: actualChanges,
             selection: {
-                anchor: updDocMsg.cursorIndex,
+                anchor: newCursorPos,
             }
         };
     }
 
     const BlockLocalChanges = EditorState.transactionFilter.of(tr => {
         if (tr.docChanged && !updateFromCode) {
-            return sendChangesToCrdt(tr);
-        } else {
-            return tr;
-        }
+            sendChangesToCrdt(tr);
+        } 
+        return tr
     })
 
     function onUpdate(update: ViewUpdate) {

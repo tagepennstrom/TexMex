@@ -151,6 +151,7 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 			globalDocument.HandleCChange(jsonCChange)
 
 			broadcastMessage(ctx, env.EditDocMsg, user)
+
 			break
 
 		case "stateRequest":
