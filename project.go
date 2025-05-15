@@ -9,8 +9,8 @@ import (
 	"os"
 	"os/exec"
 
-	"websocket-server/crdt"
 	"path/filepath"
+	"websocket-server/crdt"
 )
 
 type Project struct {
@@ -210,6 +210,26 @@ func saveProjectDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Println("Document saved successfully")
+	log.Println("yal", projectName, documentName)
+}
+
+func saveProjectDocumentServerSide(projectName string, documentName string) {
+	// hitta path
+
+	log.Println("Saving document...")
+	updatedDocumentString := globalDocument.ToString()
+	updatedDocument := []byte(updatedDocumentString)
+
+	documentPath := fmt.Sprintf("%s/%s/%s", projectsDir, projectName, documentName)
+	err := os.WriteFile(documentPath, updatedDocument, os.FileMode(0600))
+
+	if err != nil {
+		errorMessage := fmt.Sprintf("Error when saving file: %s", err)
+		log.Println(errorMessage)
+		return
+	}
+	log.Println("Document saved successfully")
+
 }
 
 func getProjectPdf(w http.ResponseWriter, r *http.Request) {

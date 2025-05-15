@@ -243,6 +243,7 @@
 
     function onUpdate(update: ViewUpdate) {
         if (updateFromCode) return;
+        return
         const serverUrl = `http://${location.hostname}:8080`;
         fetch(`${serverUrl}/projects/${page.params.name}/documents/document.tex`, {
             method: "PUT",
@@ -286,7 +287,10 @@
                 editorViewStore.set(editorView);
             });
 
-        socket = new WebSocket(`${serverUrl}/editDocWebsocket`);
+        //socket = new WebSocket(`${serverUrl}/editDocWebsocket`);
+        // in your front-end:
+        socket = new WebSocket(`${serverUrl}/editDocWebsocket?projectName=${page.params.name}&documentName=document.tex`)
+
         socket.addEventListener("message", (event) => {
             const message = JSON.parse(event.data);
             switch (message.type) {

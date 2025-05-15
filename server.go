@@ -37,8 +37,15 @@ type Envelope struct {
 }
 
 type Client struct {
-	wscon *websocket.Conn
-	id    int
+	wscon        *websocket.Conn
+	id           int
+	projectName  string
+	documentName string
+}
+
+type Projects struct {
+	projectName  string
+	documentName string
 }
 
 // *
@@ -46,6 +53,7 @@ type Client struct {
 // *
 
 var connections []Client
+var currentOpenProjects Projects
 var currIDCounter int = 0
 var globalDocument crdt.Document
 
@@ -106,8 +114,23 @@ func acceptConnection(w http.ResponseWriter, r *http.Request) Client {
 	if err != nil {
 		log.Printf("Failed to create websocket connection: %s", err)
 	}
+
+	project := r.URL.Query().Get("projectName")
+	doc := r.URL.Query().Get("documentName")
+
 	currIDCounter++
-	user := Client{wscon: c, id: currIDCounter}
+	user := Client{
+		wscon:        c,
+		id:           currIDCounter,
+		projectName:  project,
+		documentName: doc,
+	}
+
+	currentOpenProjects = Projects{
+		projectName:  project,
+		documentName: doc,
+	}
+
 	return user
 
 }
@@ -149,7 +172,8 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 			// uppdatera globala CRDTn
 			jsonCChange := env.EditDocMsg.JsonCChanges
 			globalDocument.HandleCChange(jsonCChange)
-
+			saveProjectDocumentServerSide(currentOpenProjects.projectName, currentOpenProjects.documentName)
+			println("AHHHHHHH")
 			broadcastMessage(ctx, env.EditDocMsg, user)
 
 			break
