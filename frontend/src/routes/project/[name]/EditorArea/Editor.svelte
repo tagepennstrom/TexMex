@@ -56,6 +56,28 @@
         iChanges.forEach((change) => {
             const cursorPos = editorView.state.selection.main.anchor;
 
+            if (change.text.length > 1) {
+                const newCursor = change.fromB + change.text.length;
+
+                for (let i = 0; i < change.text.length; i++) {
+                    
+                    editorView.dispatch({
+                    changes: {
+                        from: change.fromB+i,
+                        to: change.fromB+i,
+                        insert: change.text.charAt(i),
+                    },
+                    selection: {
+                        anchor: change.fromB+i+1
+                    },
+                });
+
+                }
+
+                
+                return;
+            }
+            
             let newCursor: number = 0;
 
             if (change.text == "") {

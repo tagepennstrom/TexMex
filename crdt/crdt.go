@@ -185,13 +185,86 @@ func (d *Document) HandleCChange(jsonCChange string) string {
 
 			break
 
+		case "paste":
+
+			i := d.PasteInsertCoord(change.Letter, coord)
+
+			change := Change{
+				FromA: -1,
+				ToA:   -1,
+				FromB: i,
+				ToB:   i + len(change.Letter),
+				Text:  change.Letter,
+			}
+			iChange = append(iChange, change)
 		}
+
 	}
 
 	bytearray, _ := json.Marshal(iChange)
 
 	return string(bytearray)
 
+}
+
+func AddRaise(c CoordT, raise int) CoordT {
+
+	newC := append(c.Coordinate, raise)
+
+	return CoordT{
+		Coordinate: newC,
+		ID:         c.ID,
+	}
+}
+
+func (d *Document) PasteInsert(paste string, from int) CoordT {
+
+	prevItem, caseFour := d.IndexToCoordinate(from)
+
+	var firstPlacement CoordT
+	if caseFour {
+		firstPlacement = GetAppendCoordinate(prevItem.Location.Coordinate, uID)
+	} else {
+		nextItem := prevItem.Next
+		coord := findIntermediateCoordinate(prevItem.Location, nextItem.Location)
+
+		firstPlacement = CoordT{
+			Coordinate: coord,
+			ID:         uID,
+		}
+	}
+
+	for i, ch := range paste {
+		var loc CoordT
+		if i != 0 {
+			loc = AddRaise(firstPlacement, i+1)
+		}
+
+		d.Textcontent, _ = Insertion(string(ch), loc, d.Textcontent, uID)
+		if d.CursorIndex() == from {
+			d.CursorForward()
+		}
+	}
+
+	return firstPlacement
+}
+
+func (d *Document) PasteInsertCoord(paste string, loc CoordT) int {
+
+	_, i := findPrevItem(loc, d.Textcontent)
+
+	firstPlacement := loc
+
+	for i, ch := range paste {
+		var loc CoordT
+		if i != 0 {
+			loc = AddRaise(firstPlacement, i+1)
+		}
+
+		d.Textcontent, _ = Insertion(string(ch), loc, d.Textcontent, uID)
+	}
+
+	return i
 }
 
 func applyAndRecordOperations(changes []Change, cursorIndex int) []CoordChanges {
@@ -209,6 +282,14 @@ func applyAndRecordOperations(changes []Change, cursorIndex int) []CoordChanges 
 				change := buildCoordChange(crd, "delete", "")
 				allChanges = append(allChanges, change)
 			}
+
+		} else if (change.FromA == change.ToA) && len(change.Text) > 1 {
+			// PASTE Operation
+
+			crd := DocuMain.PasteInsert(change.Text, change.FromB)
+
+			change := buildCoordChange(crd, "paste", change.Text)
+			allChanges = append(allChanges, change)
 
 		} else if change.FromA == change.ToA {
 			// INSERT Operation
