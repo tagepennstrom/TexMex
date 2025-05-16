@@ -176,8 +176,9 @@ func getProjectDocument(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errorMessage, http.StatusBadRequest)
 		return
 	}
-
-	globalDocument = crdt.DocumentFromStr(string(document))
+	if globalDocument.Active == false {
+		globalDocument = crdt.DocumentFromStr(string(document))
+	}
 	_, err = w.Write(document)
 	if err != nil {
 		errorMessage := fmt.Sprintf("Failed to write document: %s", err)

@@ -360,6 +360,7 @@ func PrintDocument(verbose bool) {
 
 func DocumentFromStr(str string) Document {
 	doc := NewDocument()
+	doc.Active = true // "activate" project
 	for _, ch := range str {
 		doc.Insert(string(ch), 0)
 	}
