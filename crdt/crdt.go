@@ -258,7 +258,9 @@ func (d *Document) PasteInsertCoord(paste string, loc CoordT) int {
 	for i, ch := range paste {
 		var loc CoordT
 		if i != 0 {
-			loc = AddRaise(firstPlacement, i+1)
+			loc = AddRaise(firstPlacement, i)
+		} else {
+			loc = firstPlacement
 		}
 
 		d.Textcontent, _ = Insertion(string(ch), loc, d.Textcontent, uID)
