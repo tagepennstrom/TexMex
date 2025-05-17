@@ -71,11 +71,6 @@
             const cursorPos = editorView.state.selection.main.anchor;
 
             let newCursor = pasteUpdate(change) // hanterar om change är en paste
-            if (newCursor == 0){
-                console.log("That was not a paste.\n", "Got:", change.text)
-            } else {
-                console.log("Paste detected.\n", "Got:", change.text)
-            }
 
 
             if (change.text == "") {
@@ -124,6 +119,8 @@
         
         const json = JSON.stringify(env)
         socket.send(json)     
+        console.log("Operation sent")
+
 
     }
 
@@ -223,7 +220,7 @@
                     
                     const loadedDocStr = LoadState(jsonString)
 
-                    console.log("Recieved doc state:", loadedDocStr)
+                    console.log("Recieved doc state!")
                     dispatchStateToEditor(loadedDocStr)
 
                     updateFromCode = false;
@@ -231,8 +228,7 @@
                     
 
                 case "operation":
-
-                    console.log(message.editDocMsg.byteCChanges);
+                    console.log("Operation recieved")
                     applyUpdate(message.editDocMsg.byteCChanges)
                     break;
 

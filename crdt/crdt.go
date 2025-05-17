@@ -513,7 +513,7 @@ func CompareIndexes(c1 CoordT, c2 CoordT) bool {
 		} else if c2.ID < c1.ID {
 			return false
 		} else {
-			println("This should be a deletion. (Compare indexes)") // Har fått det felet
+
 			//fmt.Println(c1.Coordinate, "+", c1.ID, "vs", c2.Coordinate, "+", c2.ID)
 			//os.Exit(1)
 			return true
