@@ -9,6 +9,7 @@
     import { editorView as editorViewStore } from "$lib/stores";
     import { autocompletion } from "@codemirror/autocomplete";
     import { myCompletions } from "$lib/completions";
+	import { json } from "@sveltejs/kit";
 
 
     let socket: WebSocket;
@@ -39,7 +40,7 @@
 
     type UpdatedDocMessage = {
         cursorIndex: number
-        jsonCChanges: string
+        byteCChanges64: string
     }
 
     type Envelope = {
@@ -145,22 +146,17 @@
 
         const cursorIndex = editorView.state.selection.main.anchor;
 
-        const updDocMsg: UpdatedDocMessage = UpdateDocument(
-            changes,
-            cursorIndex,
-        )
-
+        const fo: UpdatedDocMessage = UpdateDocument(changes, cursorIndex)
 
         const env: Envelope = {
             type: "operation",
-            editDocMsg: updDocMsg,
+            editDocMsg: fo
         }
-        console.log("Sending envelope:",env)
-        socket.send(JSON.stringify(env));
+        
+        const json = JSON.stringify(env)
+        socket.send(json)     
 
-        
-        const coordChanges: CoordChanges[] = JSON.parse(updDocMsg.jsonCChanges);
-        
+                
         type TransactionSpecChange = {
             from: number;
             to: number;
@@ -179,81 +175,7 @@
                 anchor: 0,
             }
         };
-        
 
-        let newCursorPos: number = updDocMsg.cursorIndex
-
-        const actualChanges: TransactionSpecChange[] = [];
-        if (isInsert(coordChanges)) {
-            for (let i = 0; i < coordChanges.length; i++) {
-                const change = coordChanges[i];
-                const index = CoordinateToIndex(JSON.stringify(change.coordinate))-1;
-                actualChanges.push({
-                    from: index - i,
-                    to: index - i,
-                    insert: change.letter,
-                });
-            }
-        } else if (isDelete(coordChanges)) {
-            for (let i = 0; i < coordChanges.length; i++) {
-                const change = coordChanges[i];
-                const index = CoordinateToIndex(JSON.stringify(change.coordinate)) - 1;
-                actualChanges.push({
-                    from: index + i,
-                    to: index + i + 1,
-                    insert: "",
-                });
-            }
-        } else {
-            // SELECT AND REPLACE Operation
-            // TODO: fungerar inte
-
-            let tot: number = totalDeletes(coordChanges)
-            
-            CRDebug(true)
-
-            for (let i = 0; i < tot; i++) {
-                const change = coordChanges[i];
-                let index = CoordinateToIndex(JSON.stringify(change.coordinate)) -2;
-                if (index == -1) {
-                    index = 0;
-                }
-
-                console.log("sel and del - i",i,"ind:",index,"pos", index + i, "coord:", change.coordinate.coord)
-                actualChanges.push({
-                    from: index + i,
-                    to: index + i + 1,
-                    insert: "",
-                });
-            }
-
-            for (let i = 0; i < coordChanges.length - tot; i++) {
-                const change = coordChanges[i + tot];
-                
-                let index = CoordinateToIndex(JSON.stringify(change.coordinate))-1;
-
-                console.log("sel and ins:",i,"at:",index, "is:", change.letter)
-                continue
-                actualChanges.push({
-                    from: index - i,
-                    to: index - i,
-                    insert: change.letter,
-                });
-            }
-            
-            for (let i = 0; i < actualChanges.length; i++){
-                console.log(actualChanges[i])
-            }
-            newCursorPos = 0
-            
-        }
-
-        return {
-            changes: actualChanges,
-            selection: {
-                anchor: newCursorPos,
-            }
-        };
     }
 
     const BlockLocalChanges = EditorState.transactionFilter.of(tr => {
@@ -290,6 +212,18 @@
     ]
 
 
+    function decodeByteData(encodedState: string): string {
+
+        const binaryStr = atob(encodedState);
+
+        const bytes = Uint8Array.from(binaryStr, c => c.charCodeAt(0));
+
+        const decoder = new TextDecoder("utf-8");
+        const dataString = decoder.decode(bytes);
+
+        return dataString
+    }
+
     onMount(() => {
         const serverUrl = `http://${location.hostname}:8080`;
 
@@ -314,7 +248,12 @@
         socket = new WebSocket(`${serverUrl}/editDocWebsocket?projectName=${page.params.name}&documentName=document.tex`)
 
         socket.addEventListener("message", (event) => {
+
+            //const text = new TextDecoder().decode(event.data);
+
             const message = JSON.parse(event.data);
+
+
             switch (message.type) {
 
                 case "user_connected":
@@ -323,7 +262,6 @@
 
                     socket.send(JSON.stringify({
                         type:     "stateRequest",
-                        targetId: message.id
                     }));
                     // todo: implementera nån wait function (promise?) och nån 
                     //      timeout om den inte får tillbaka CRDT state inom x sekunder
@@ -332,9 +270,9 @@
 
                 case "stateResponse":
                     updateFromCode = true;
-                    const encodedState = message.byteState as string;
 
-                    const jsonString = atob(encodedState);
+                    const jsonString = decodeByteData(message.byteState as string)
+                    
                     const loadedDocStr = LoadState(jsonString)
 
                     console.log("Recieved doc state:", loadedDocStr)
@@ -356,8 +294,9 @@
                     
 
                 case "operation":
-                    console.log(message.editDocMsg);
-                    applyUpdate(message.editDocMsg.jsonCChanges)
+
+                    console.log(message.editDocMsg.byteCChanges);
+                    applyUpdate(message.editDocMsg.byteCChanges)
                     break;
 
 

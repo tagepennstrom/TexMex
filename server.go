@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -27,7 +28,7 @@ type Change struct {
 
 type EditDocMessage struct {
 	CursorIndex  int    `json:"cursorIndex"`
-	JsonCChanges string `json:"jsonCChanges"`
+	ByteCChanges []byte `json:"byteCChanges"`
 }
 
 type Envelope struct {
@@ -107,6 +108,7 @@ func acceptConnection(w http.ResponseWriter, r *http.Request) Client {
 
 	ip, _ := getLocalIP()
 	frontendHost := fmt.Sprintf("%s:%s", ip, "5173")
+
 	opts := websocket.AcceptOptions{
 		OriginPatterns: []string{frontendHost},
 	}
@@ -114,6 +116,8 @@ func acceptConnection(w http.ResponseWriter, r *http.Request) Client {
 	if err != nil {
 		log.Printf("Failed to create websocket connection: %s", err)
 	}
+
+	c.SetReadLimit(10 << 20) // 10mib ( 10 * 2^20 )
 
 	project := r.URL.Query().Get("projectName")
 	doc := r.URL.Query().Get("documentName")
@@ -158,7 +162,9 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	var env Envelope
 
 	for {
-		err := wsjson.Read(ctx, user.wscon, &env)
+		_, msg, err := user.wscon.Read(ctx)
+
+		println(msg)
 
 		if err != nil {
 			log.Printf("Failed to read websocket message: %s", err)
@@ -166,14 +172,23 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if err := json.Unmarshal(msg, &env); err != nil {
+			log.Printf("unmarshal error (beginning): %v", err)
+			return
+		}
+
 		switch env.Type {
 
 		case "operation":
 			// uppdatera globala CRDTn
-			jsonCChange := env.EditDocMsg.JsonCChanges
-			globalDocument.HandleCChange(jsonCChange)
+			ByteCChanges := env.EditDocMsg.ByteCChanges
+
+			s := globalDocument.HandleCChange(string(ByteCChanges))
+			println("json:", string(ByteCChanges), "res is", s)
 			saveProjectDocumentServerSide(currentOpenProjects.projectName, currentOpenProjects.documentName)
+
 			println("AHHHHHHH")
+
 			broadcastMessage(ctx, env.EditDocMsg, user)
 
 			break

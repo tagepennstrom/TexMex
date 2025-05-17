@@ -14,6 +14,7 @@ go build -o ..\frontend\src\wasm\main.wasm
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"syscall/js"
 
@@ -73,11 +74,13 @@ func updateDocumentWrap(this js.Value, args []js.Value) any {
 		return nil
 	}
 
-	m := map[string]any{
-		"cursorIndex":  res.CursorIndex,
-		"jsonCChanges": string(jsonChanges), // koordinater i json form
-	}
-	return js.ValueOf(m)
+	b64 := base64.StdEncoding.EncodeToString(jsonChanges)
+
+	jsObj := js.Global().Get("Object").New()
+	jsObj.Set("cursorIndex", res.CursorIndex)
+	jsObj.Set("byteCChanges", b64)
+
+	return jsObj
 }
 
 func handleOperation(this js.Value, args []js.Value) any {
@@ -86,9 +89,15 @@ func handleOperation(this js.Value, args []js.Value) any {
 		return ""
 	}
 
-	jsonChange := args[0].String()
+	b64Input := args[0].String() // b64 enkodat
+	jsonBytes, err := base64.StdEncoding.DecodeString(b64Input)
+	if err != nil {
+		println("Failed to decode Base64: %v", err)
+	}
 
-	jsonIndexChanges := crdt.DocuMain.HandleCChange(jsonChange)
+	jsonString := string(jsonBytes)
+
+	jsonIndexChanges := crdt.DocuMain.HandleCChange(jsonString)
 
 	return jsonIndexChanges
 }
