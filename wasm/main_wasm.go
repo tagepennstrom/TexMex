@@ -102,29 +102,6 @@ func handleOperation(this js.Value, args []js.Value) any {
 	return jsonIndexChanges
 }
 
-func getCursorIndex(this js.Value, args []js.Value) any {
-	return crdt.DocuMain.CursorIndex()
-}
-
-func coordinateToIndex(this js.Value, args []js.Value) any {
-	if len(args) != 1 {
-		println("Wrong number of arguments (coordinateToIndex)")
-		return nil
-	}
-
-	coordJson := args[0].String()
-	return crdt.DocuMain.CoordinateToIndex2(coordJson)
-}
-
-func crdtToString(this js.Value, args []js.Value) any {
-	if len(args) != 0 {
-		println("Wrong number of arguments [ CRDebug() ]")
-		return nil
-	}
-
-	return crdt.DocuMain.ToString()
-}
-
 func debugFeat(this js.Value, args []js.Value) any {
 	if len(args) != 1 {
 		println("Wrong number of arguments [ CRDebug() ]")
@@ -143,9 +120,6 @@ func registerCallbacks() {
 	js.Global().Set("CRDebug", js.FuncOf(debugFeat))
 	js.Global().Set("LoadState", js.FuncOf(loadState))
 	js.Global().Set("HandleOperation", js.FuncOf(handleOperation))
-	js.Global().Set("GetCursorIndex", js.FuncOf(getCursorIndex))
-	js.Global().Set("CoordinateToIndex", js.FuncOf(coordinateToIndex))
-	js.Global().Set("crdtToString", js.FuncOf(crdtToString))
 
 	println("Function callbacks registered")
 }
