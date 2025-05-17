@@ -27,17 +27,6 @@
         text: string;   // Tillagd text, tom vid borttagning
     }
 
-    type CoordT = {
-        coordinate: number[];
-        id: number;
-    }
-
-    type CoordChanges = {
-        coordinate: CoordT;
-        operation: string;
-        letter: string;
-    }
-
     type UpdatedDocMessage = {
         cursorIndex: number
         byteCChanges64: string
@@ -46,6 +35,30 @@
     type Envelope = {
         type: string          
         editDocMsg: UpdatedDocMessage
+    }
+
+    function pasteUpdate(change: Change): number{
+        if (change.text.length > 1) {
+            const newCursor = change.fromB + change.text.length;
+
+            for (let i = 0; i < change.text.length; i++) {
+                
+                editorView.dispatch({
+                changes: {
+                    from: change.fromB+i,
+                    to: change.fromB+i,
+                    insert: change.text.charAt(i),
+                },
+                selection: {
+                    anchor: change.fromB+i+1
+                },
+            });
+
+            }
+
+            return newCursor;
+        }
+        else return 0
     }
 
     async function applyUpdate(jsonChanges: string) {
@@ -57,29 +70,7 @@
         iChanges.forEach((change) => {
             const cursorPos = editorView.state.selection.main.anchor;
 
-            if (change.text.length > 1) {
-                const newCursor = change.fromB + change.text.length;
-
-                for (let i = 0; i < change.text.length; i++) {
-                    
-                    editorView.dispatch({
-                    changes: {
-                        from: change.fromB+i,
-                        to: change.fromB+i,
-                        insert: change.text.charAt(i),
-                    },
-                    selection: {
-                        anchor: change.fromB+i+1
-                    },
-                });
-
-                }
-
-                
-                return;
-            }
-            
-            let newCursor: number = 0;
+            let newCursor = pasteUpdate(change) // hanterar om change är en paste
 
             if (change.text == "") {
                 newCursor = cursorPos > change.fromB ? cursorPos - 1 : cursorPos
@@ -102,36 +93,8 @@
         updateFromCode = false;
     }
 
-    function isInsert(coordChanges: CoordChanges[]) {
-        for (const change of coordChanges) {
-            if (change.operation !== "insert") {
-                return false;
-            }
-        }
-        return true;
-    }
 
-    function isDelete(coordChanges: CoordChanges[]) {
-        for (const change of coordChanges) {
-            if (change.operation !== "delete") {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    function totalDeletes(coordChanges: CoordChanges[]) {
-        let i = 0;
-        for (const change of coordChanges) {
-            if (change.operation == "delete") {
-                i++
-            }
-        }
-        return i;
-    }
-
-
-    function sendChangesToCrdt(tr: Transaction): TransactionSpec {
+    function sendChangesToCrdt(tr: Transaction){
         
         const changes: Change[] = [];
         tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
@@ -156,26 +119,6 @@
         const json = JSON.stringify(env)
         socket.send(json)     
 
-                
-        type TransactionSpecChange = {
-            from: number;
-            to: number;
-            insert: string;
-        };
-
-        const s: TransactionSpecChange = {
-            from: 1,
-            to:1,
-            insert:""
-        }
-
-        return {
-            changes: s,
-            selection: {
-                anchor: 0,
-            }
-        };
-
     }
 
     const BlockLocalChanges = EditorState.transactionFilter.of(tr => {
@@ -185,21 +128,14 @@
         return tr
     })
 
-    function onUpdate(update: ViewUpdate) {
-        if (updateFromCode) return;
-        return
-        const serverUrl = `http://${location.hostname}:8080`;
-        fetch(`${serverUrl}/projects/${page.params.name}/documents/document.tex`, {
-            method: "PUT",
-            headers: { "Content-Type": "text/plain" },
-            body: update.state.doc.toString(),
-        })
-    }
-
     const fixedHeightEditor = EditorView.theme({
         "&": {height: "700px"},
         ".cm-scroller": {overflow: "auto"}
     })
+
+    function onUpdate(){
+        return // Den här funktionen används inte längre, bara placeholder
+    }
 
     const extensions = [
         basicSetup,
@@ -215,13 +151,25 @@
     function decodeByteData(encodedState: string): string {
 
         const binaryStr = atob(encodedState);
-
         const bytes = Uint8Array.from(binaryStr, c => c.charCodeAt(0));
 
         const decoder = new TextDecoder("utf-8");
         const dataString = decoder.decode(bytes);
 
         return dataString
+    }
+
+    function dispatchStateToEditor(loadedDocStr: string){
+        editorView.dispatch({
+            changes: {
+                from: 0,
+                to: editorView.state.doc.length,
+                insert: loadedDocStr,
+            },
+            selection: {
+                anchor: loadedDocStr.length
+            },
+        });
     }
 
     onMount(() => {
@@ -243,16 +191,11 @@
                 editorViewStore.set(editorView);
             });
 
-        //socket = new WebSocket(`${serverUrl}/editDocWebsocket`);
-        // in your front-end:
         socket = new WebSocket(`${serverUrl}/editDocWebsocket?projectName=${page.params.name}&documentName=document.tex`)
 
         socket.addEventListener("message", (event) => {
 
-            //const text = new TextDecoder().decode(event.data);
-
             const message = JSON.parse(event.data);
-
 
             switch (message.type) {
 
@@ -263,8 +206,7 @@
                     socket.send(JSON.stringify({
                         type:     "stateRequest",
                     }));
-                    // todo: implementera nån wait function (promise?) och nån 
-                    //      timeout om den inte får tillbaka CRDT state inom x sekunder
+                    // todo: promise och wait om ingen respons?
 
                     break;
 
@@ -276,20 +218,9 @@
                     const loadedDocStr = LoadState(jsonString)
 
                     console.log("Recieved doc state:", loadedDocStr)
-
-                    editorView.dispatch({
-                                changes: {
-                                    from: 0,
-                                    to: editorView.state.doc.length,
-                                    insert: loadedDocStr,
-                                },
-                                selection: {
-                                    anchor: loadedDocStr.length
-                                },
-                            });
+                    dispatchStateToEditor(loadedDocStr)
 
                     updateFromCode = false;
-                    
                     break;
                     
 
