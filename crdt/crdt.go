@@ -187,7 +187,7 @@ func (d *Document) HandleCChange(jsonCChange string) string {
 
 		case "paste":
 
-			i := d.PasteInsertCoord(change.Letter, coord)
+			i := d.PasteInsertion(coord, change.Letter)
 
 			change := Change{
 				FromA: -1,
@@ -207,12 +207,22 @@ func (d *Document) HandleCChange(jsonCChange string) string {
 
 }
 
-func AddRaise(c CoordT, raise int) CoordT {
+func AddRaise(c CoordT, raise int, raiseGrade int) CoordT {
 
-	newC := append(c.Coordinate, raise)
+	ogLen := len(c.Coordinate)
+
+	new := make([]int, ogLen+raiseGrade+1)
+
+	copy(new, c.Coordinate)
+
+	for i := 0; i < raiseGrade; i++ {
+		new[i+ogLen] = 0
+	}
+
+	new[ogLen+raiseGrade] = raise
 
 	return CoordT{
-		Coordinate: newC,
+		Coordinate: new,
 		ID:         c.ID,
 	}
 }
@@ -234,39 +244,71 @@ func (d *Document) PasteInsert(paste string, from int) CoordT {
 		}
 	}
 
-	for i, ch := range paste {
-		var loc CoordT
-		if i != 0 {
-			loc = AddRaise(firstPlacement, i+1)
-		}
-
-		d.Textcontent, _ = Insertion(string(ch), loc, d.Textcontent, uID)
-		if d.CursorIndex() == from {
-			d.CursorForward()
-		}
-	}
+	d.PasteInsertion(firstPlacement, paste)
 
 	return firstPlacement
 }
 
-func (d *Document) PasteInsertCoord(paste string, loc CoordT) int {
+// hitta hur högt pastade koordinater måste höjas utan att krocka med next
+func findRaiseGrade(ins CoordT, comp CoordT) int {
 
-	_, i := findPrevItem(loc, d.Textcontent)
-
-	firstPlacement := loc
-
-	for i, ch := range paste {
-		var loc CoordT
-		if i != 0 {
-			loc = AddRaise(firstPlacement, i)
-		} else {
-			loc = firstPlacement
-		}
-
-		d.Textcontent, _ = Insertion(string(ch), loc, d.Textcontent, uID)
+	if len(ins.Coordinate) >= len(comp.Coordinate) {
+		return 0
+	} else {
+		return len(comp.Coordinate) - len(ins.Coordinate)
 	}
 
-	return i
+}
+
+func (d *Document) PasteInsertion(headCoord CoordT, pasteText string) int {
+
+	prevItem, index := findPrevItem(headCoord, d.Textcontent)
+	finalNext := prevItem.Next // nil?
+
+	// skapa en ny nod
+	headItem := Item{
+		Letter:   string(pasteText[0]),
+		Location: headCoord,
+		ID:       headCoord.ID,
+	}
+
+	headItem.Prev = prevItem
+	prevItem.Next = &headItem
+
+	var rg int
+	if finalNext != nil {
+		rg = findRaiseGrade(headCoord, finalNext.Location)
+	} else {
+		rg = 0
+	}
+
+	userID := headCoord.ID
+	prevI := &headItem
+
+	for i, ch := range pasteText {
+		if i == 0 {
+			continue
+		}
+		c := AddRaise(headCoord, i, rg)
+
+		new := &Item{Letter: string(ch), Location: c, ID: userID}
+
+		new.Prev = prevI
+		prevI.Next = new
+
+		prevI = new
+	}
+
+	if finalNext != nil {
+		finalNext.Prev = prevI
+		prevI.Next = finalNext
+	} else {
+		d.Textcontent.Tail = prevI
+	}
+
+	d.Textcontent.Length = d.Textcontent.Length + len(pasteText)
+
+	return index
 }
 
 func applyAndRecordOperations(changes []Change, cursorIndex int) []CoordChanges {
@@ -287,7 +329,6 @@ func applyAndRecordOperations(changes []Change, cursorIndex int) []CoordChanges 
 
 		} else if (change.FromA == change.ToA) && len(change.Text) > 1 {
 			// PASTE Operation
-
 			crd := DocuMain.PasteInsert(change.Text, change.FromB)
 
 			change := buildCoordChange(crd, "paste", change.Text)

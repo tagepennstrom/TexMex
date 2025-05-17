@@ -71,6 +71,12 @@
             const cursorPos = editorView.state.selection.main.anchor;
 
             let newCursor = pasteUpdate(change) // hanterar om change är en paste
+            if (newCursor == 0){
+                console.log("That was not a paste.\n", "Got:", change.text)
+            } else {
+                console.log("Paste detected.\n", "Got:", change.text)
+            }
+
 
             if (change.text == "") {
                 newCursor = cursorPos > change.fromB ? cursorPos - 1 : cursorPos

@@ -164,8 +164,6 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	for {
 		_, msg, err := user.wscon.Read(ctx)
 
-		println(msg)
-
 		if err != nil {
 			log.Printf("Failed to read websocket message: %s", err)
 			connections = removeConn(user)
@@ -183,11 +181,8 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 			// uppdatera globala CRDTn
 			ByteCChanges := env.EditDocMsg.ByteCChanges
 
-			s := globalDocument.HandleCChange(string(ByteCChanges))
-			println("json:", string(ByteCChanges), "res is", s)
+			globalDocument.HandleCChange(string(ByteCChanges))
 			saveProjectDocumentServerSide(currentOpenProjects.projectName, currentOpenProjects.documentName)
-
-			println("AHHHHHHH")
 
 			broadcastMessage(ctx, env.EditDocMsg, user)
 
