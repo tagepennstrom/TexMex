@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
+
+	"websocket-server/crdt"
 )
 
 const frontendPort = "5173"
@@ -24,16 +27,40 @@ type Change struct {
 }
 
 type EditDocMessage struct {
-	Changes []Change `json:"changes"`
+	CursorIndex  int    `json:"cursorIndex"`
+	ByteCChanges []byte `json:"byteCChanges"`
+}
+
+type Envelope struct {
+	Type       string         `json:"type"`                 // "operation", "stateRequest", "stateResponse"
+	EditDocMsg EditDocMessage `json:"editDocMsg,omitempty"` // changes
+	ByteState  []byte         `json:"byteState,omitempty"`  // for stateResponse
 }
 
 type Client struct {
-	wscon *websocket.Conn
-	id    int
+	wscon        *websocket.Conn
+	id           int
+	projectName  string
+	documentName string
 }
 
+type Projects struct {
+	projectName  string
+	documentName string
+}
+
+// *
+// Globala variabler
+// *
+
 var connections []Client
-var currId int = 0
+var currentOpenProjects Projects
+var currIDCounter int = 0
+var globalDocument crdt.Document
+
+// *
+// Funktioner
+// *
 
 func getLocalIP() (string, error) {
 	conn, err := net.Dial("udp", "12.34.56.78:90")
@@ -54,7 +81,12 @@ func broadcastMessage(ctx context.Context, message EditDocMessage, sender Client
 		if c.id == sender.id {
 			continue
 		}
-		err := wsjson.Write(ctx, c.wscon, message)
+		resp := Envelope{
+			Type:       "operation",
+			EditDocMsg: message,
+		}
+
+		err := wsjson.Write(ctx, c.wscon, resp)
 
 		if err != nil {
 			log.Printf("Failed to write websocket message: %s", err)
@@ -76,6 +108,7 @@ func acceptConnection(w http.ResponseWriter, r *http.Request) Client {
 
 	ip, _ := getLocalIP()
 	frontendHost := fmt.Sprintf("%s:%s", ip, "5173")
+
 	opts := websocket.AcceptOptions{
 		OriginPatterns: []string{frontendHost},
 	}
@@ -83,8 +116,25 @@ func acceptConnection(w http.ResponseWriter, r *http.Request) Client {
 	if err != nil {
 		log.Printf("Failed to create websocket connection: %s", err)
 	}
-	currId++
-	user := Client{wscon: c, id: currId}
+
+	c.SetReadLimit(10 << 20) // 10mib ( 10 * 2^20 )
+
+	project := r.URL.Query().Get("projectName")
+	doc := r.URL.Query().Get("documentName")
+
+	currIDCounter++
+	user := Client{
+		wscon:        c,
+		id:           currIDCounter,
+		projectName:  project,
+		documentName: doc,
+	}
+
+	currentOpenProjects = Projects{
+		projectName:  project,
+		documentName: doc,
+	}
+
 	return user
 
 }
@@ -95,8 +145,9 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	connections = append(connections, user)
 
 	initialMessage := struct {
-		ID int `json:"id"`
-	}{ID: user.id}
+		ID   int    `json:"id"`
+		Type string `json:"type"`
+	}{ID: user.id, Type: "user_connected"}
 
 	// Send the ID to the client (use wsjson.Write to send a JSON message)
 	ctx := context.Background()
@@ -108,10 +159,10 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer user.wscon.CloseNow()
 
-	var newChange EditDocMessage
+	var env Envelope
 
 	for {
-		err := wsjson.Read(ctx, user.wscon, &newChange)
+		_, msg, err := user.wscon.Read(ctx)
 
 		if err != nil {
 			log.Printf("Failed to read websocket message: %s", err)
@@ -119,8 +170,45 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// log.Printf("Operation made: %s\n", newChange.operation)
-		broadcastMessage(ctx, newChange, user)
+		if err := json.Unmarshal(msg, &env); err != nil {
+			log.Printf("unmarshal error (beginning): %v", err)
+			return
+		}
+
+		switch env.Type {
+
+		case "operation":
+			// uppdatera globala CRDTn
+			ByteCChanges := env.EditDocMsg.ByteCChanges
+
+			globalDocument.HandleCChange(string(ByteCChanges))
+			saveProjectDocumentServerSide(currentOpenProjects.projectName, currentOpenProjects.documentName)
+
+			broadcastMessage(ctx, env.EditDocMsg, user)
+
+			break
+
+		case "stateRequest":
+			data, err := globalDocument.Snapshot()
+
+			if err != nil {
+				log.Printf("snapshot error: %v", err)
+				break
+			}
+
+			resp := Envelope{
+				Type:      "stateResponse",
+				ByteState: data,
+			}
+
+			wsjson.Write(ctx, user.wscon, resp)
+			println("Response to request sent")
+			break
+
+		default:
+			println("Error. No case for switch statment. (server.go)")
+			break
+		}
 
 	}
 }
