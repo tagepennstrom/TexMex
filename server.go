@@ -44,9 +44,10 @@ type Client struct {
 	documentName string
 }
 
-type Projects struct {
+type ProjectData struct {
 	projectName  string
 	documentName string
+	docu         *crdt.Document
 }
 
 // *
@@ -54,9 +55,9 @@ type Projects struct {
 // *
 
 var connections []Client
-var currentOpenProjects Projects
 var currIDCounter int = 0
-var globalDocument crdt.Document
+
+var globalProjects map[string]ProjectData
 
 // *
 // Funktioner
@@ -75,10 +76,13 @@ func getLocalIP() (string, error) {
 
 func broadcastMessage(ctx context.Context, message EditDocMessage, sender Client) {
 
-	log.Printf("Broadcasting to %d clients\n", len(connections))
+	brdcstCount := 0
 
 	for _, c := range connections {
 		if c.id == sender.id {
+			continue
+		}
+		if c.projectName != sender.projectName {
 			continue
 		}
 		resp := Envelope{
@@ -90,8 +94,12 @@ func broadcastMessage(ctx context.Context, message EditDocMessage, sender Client
 
 		if err != nil {
 			log.Printf("Failed to write websocket message: %s", err)
+		} else {
+			brdcstCount++
 		}
 	}
+	log.Printf("Broadcasted to %d clients connected to project: '%s'\n", brdcstCount, sender.projectName)
+
 }
 
 func removeConn(connToDelete Client) []Client {
@@ -130,9 +138,20 @@ func acceptConnection(w http.ResponseWriter, r *http.Request) Client {
 		documentName: doc,
 	}
 
-	currentOpenProjects = Projects{
-		projectName:  project,
-		documentName: doc,
+	_, exists := globalProjects[project]
+
+	if !exists {
+		new := crdt.NewDocument()
+		new.Active = false
+
+		newEntry := ProjectData{
+			projectName:  project,
+			documentName: doc,
+			docu:         &new,
+		}
+
+		// mappa
+		globalProjects[project] = newEntry
 	}
 
 	return user
@@ -181,15 +200,22 @@ func editDocWebsocketHandler(w http.ResponseWriter, r *http.Request) {
 			// uppdatera globala CRDTn
 			ByteCChanges := env.EditDocMsg.ByteCChanges
 
-			globalDocument.HandleCChange(string(ByteCChanges))
-			saveProjectDocumentServerSide(currentOpenProjects.projectName, currentOpenProjects.documentName)
+			selectedDoc := globalProjects[user.projectName].docu
+			selectedDoc.HandleCChange(string(ByteCChanges))
+
+			saveProjectDocumentServerSide(user.projectName, user.documentName)
 
 			broadcastMessage(ctx, env.EditDocMsg, user)
 
 			break
 
 		case "stateRequest":
-			data, err := globalDocument.Snapshot()
+
+			selectedDoc := globalProjects[user.projectName].docu
+
+			s1 := *selectedDoc
+
+			data, err := s1.Snapshot()
 
 			if err != nil {
 				log.Printf("snapshot error: %v", err)
@@ -233,6 +259,8 @@ func main() {
 	ip, _ := getLocalIP()
 	serverAddress := fmt.Sprintf("%s:%s", ip, port)
 	log.Printf("Server running on http://%s/\n", serverAddress)
+
+	globalProjects = make(map[string]ProjectData) // init projects mapping
 
 	mux := http.NewServeMux()
 

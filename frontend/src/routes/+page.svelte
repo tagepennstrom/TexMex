@@ -21,7 +21,7 @@
     <Footer/>
 </div>
 
-<style>
+<style global>
     .page-container {
         display: flex;
         flex-direction: column;

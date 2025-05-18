@@ -10,6 +10,7 @@ import (
 	"os/exec"
 
 	"path/filepath"
+
 	"websocket-server/crdt"
 )
 
@@ -176,9 +177,31 @@ func getProjectDocument(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errorMessage, http.StatusBadRequest)
 		return
 	}
-	if globalDocument.Active == false {
-		globalDocument = crdt.DocumentFromStr(string(document))
+
+	_, exists := globalProjects[projectName]
+
+	if !exists {
+		new := crdt.NewDocument()
+		new.Active = false
+
+		newEntry := ProjectData{
+			projectName:  projectName,
+			documentName: documentName,
+			docu:         &new,
+		}
+
+		// mappa
+		globalProjects[projectName] = newEntry
 	}
+
+	selectedDoc := globalProjects[projectName].docu
+
+	if selectedDoc.Active == false {
+
+		selectedDoc.InitEmptyDocumentFromString(string(document))
+
+	}
+
 	_, err = w.Write(document)
 	if err != nil {
 		errorMessage := fmt.Sprintf("Failed to write document: %s", err)
@@ -218,7 +241,10 @@ func saveProjectDocumentServerSide(projectName string, documentName string) {
 	// hitta path
 
 	log.Println("Saving document...")
-	updatedDocumentString := globalDocument.ToString()
+
+	projDocument := globalProjects[projectName].docu
+
+	updatedDocumentString := projDocument.ToString()
 	updatedDocument := []byte(updatedDocumentString)
 
 	documentPath := fmt.Sprintf("%s/%s/%s", projectsDir, projectName, documentName)

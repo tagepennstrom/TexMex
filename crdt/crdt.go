@@ -410,6 +410,13 @@ func DocumentFromStr(str string) Document {
 	return doc
 }
 
+func (doc *Document) InitEmptyDocumentFromString(str string) {
+	doc.Active = true // "activate" project
+	for _, ch := range str {
+		doc.Insert(string(ch), 0)
+	}
+}
+
 func (doc *Document) ToString() string {
 	str := ""
 	item := doc.Textcontent.Head.Next
