@@ -129,14 +129,14 @@ func createProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filesFolderPath := fmt.Sprintf("%s/files", projectPath)
+	/* filesFolderPath := fmt.Sprintf("%s/files", projectPath)
 	err2 := os.Mkdir(filesFolderPath, os.FileMode(0775))
 	if err2 != nil {
 		errorMessage := fmt.Sprintf("Unable to create project: %s", err)
 		log.Println(errorMessage)
 		http.Error(w, errorMessage, http.StatusInternalServerError)
 		return
-	}
+	} */
 
 	emptyLatexFile := `\documentclass{article}
 \begin{document}
@@ -320,7 +320,7 @@ func uploadFileToProject(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	path := filepath.Join("projects", projectName, "files", handler.Filename) /* Hardcoded */
+	path := filepath.Join("projects", projectName, handler.Filename)
 
 	dst, err := os.Create(path)
 	if err != nil {
