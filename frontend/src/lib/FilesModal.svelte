@@ -10,8 +10,15 @@
 
     let files: FileList | null = null;
     let allFiles: AllFiles[];
+    let uploadMessage: string = "";
+    let uploadMode: boolean = false;
+
+    function toggleUploadMode() {
+        uploadMode = !uploadMode
+    }
 
     async function uploadFiles() {
+        uploadMessage = "";
         if (!projectName) {
             console.error("Projectname is null")
             return;
@@ -20,6 +27,14 @@
         if (!files || files.length === 0) {
             console.error("No files selected");
             return;
+        }
+
+        const maxSizeMB = 1;
+        for (let i = 0; i < files.length; i++) {
+            if (files[i].size > maxSizeMB * 1024 * 1024) {
+                alert(`File "${files[i].name}" is bigger than ${maxSizeMB} MB and cannot be uploaded.`);
+                return;
+            }
         }
 
         const formData = new FormData();
@@ -37,11 +52,20 @@
             if (!response.ok) {
                 throw new Error("Failed to upload files");
             }
-
+            uploadMessage = "Files uploaded sucessfully"
             console.log("Files uploaded successfully");
         } catch (error) {
             console.error("Error uploading files:", error);
         }
+    }
+
+    function removeFile(index: number) {
+        if (!files) return;
+        const fileArray = Array.from(files);
+        fileArray.splice(index, 1);
+        const dataTransfer = new DataTransfer();
+        fileArray.forEach(file => dataTransfer.items.add(file));
+        files = dataTransfer.files;
     }
 
 </script>
@@ -50,14 +74,23 @@
 <div class="backdrop">
     <div class="modal">
         <button class="close" onclick={toggleFilesModal}>Close</button>
-        <input bind:files type="file" id="file" multiple/>
-        <label for="file">Upload File</label>
-        <button onclick="{uploadFiles}">Upload</button>
-        {#if files}
-	        <h2>Selected files:</h2>
-	        {#each Array.from(files) as file}
-		        <p>{file.name} ({(file.size / (1024)).toFixed(0)} KB)</p>
-	        {/each}
+        <button class="close" onclick={toggleUploadMode}>Upload Files</button>
+        {#if uploadMode}    
+            <input bind:files type="file" id="file" multiple accept=".pdf,.tex,.txt,.bib,image/*"/>
+            <label for="file">Upload File</label>
+            <button onclick="{uploadFiles}">Upload</button>
+            {#if files && !uploadMessage}
+                <h2>Selected files:</h2>
+                {#each Array.from(files) as file, i}
+                    <p>
+                        {file.name} ({(file.size / (1024)).toFixed(0)} KB)
+                        <button class="remove-file" onclick={() => removeFile(i)} title="Remove file">✖</button>
+                    </p>
+                    {/each}
+                    {/if}
+                {#if uploadMessage}
+                    <p style="color: green; margin-top: 1em;">{uploadMessage}</p>
+                {/if}
         {/if}
     </div>
 </div>
