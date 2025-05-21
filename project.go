@@ -304,7 +304,39 @@ func getProjectPdf(w http.ResponseWriter, r *http.Request) {
 }
 
 func getFilesFromProject(w http.ResponseWriter, r *http.Request) {
-	/* ej implementerad */
+	projectName := r.URL.Query().Get("projectName")
+	if projectName == "" {
+		http.Error(w, "Empty project name", http.StatusBadRequest)
+		return
+	}
+
+	projectPath := filepath.Join(projectsDir, projectName)
+	files, err := os.ReadDir(projectPath)
+	if err != nil {
+		errorMessage := fmt.Sprintf("Error reading project directory: %s", err)
+		log.Println(errorMessage)
+		http.Error(w, errorMessage, http.StatusInternalServerError)
+		return
+	}
+
+	fileNames := []string{}
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		name := file.Name()
+		if filepath.Ext(name) == ".aux" || filepath.Ext(name) == ".log" || filepath.Ext(name) == ".pdf" {
+			continue
+		}
+		fileNames = append(fileNames, name)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(fileNames); err != nil {
+		errorMessage := fmt.Sprintf("Failed to encode file list: %s", err)
+		log.Println(errorMessage)
+		http.Error(w, errorMessage, http.StatusInternalServerError)
+	}
 }
 
 func uploadFileToProject(w http.ResponseWriter, r *http.Request) {
@@ -336,4 +368,31 @@ func uploadFileToProject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprintf(w, `{"message": "Uploaded file to %s"}`, path)
+}
+
+func deleteFileFromProject(w http.ResponseWriter, r *http.Request) {
+	projectName := r.URL.Query().Get("projectName")
+	fileName := r.URL.Query().Get("fileName")
+
+	if projectName == "" {
+		http.Error(w, "Empty project name", http.StatusBadRequest)
+		return
+	}
+
+	if fileName == "" {
+		http.Error(w, "Empty file name", http.StatusBadRequest)
+		return
+	}
+
+	filePath := filepath.Join(projectsDir, projectName, fileName)
+	err := os.Remove(filePath)
+	if err != nil {
+		errorMessage := fmt.Sprintf("Failed to delete file: %s", err)
+		log.Println(errorMessage)
+		http.Error(w, errorMessage, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"message": "File %s deleted from project %s"}`, fileName, projectName)
 }
