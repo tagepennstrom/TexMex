@@ -12,12 +12,12 @@
     let uploadMessage: string = "";
     let uploadMode: boolean = false;
     let projectFiles: string[] = [];
-    const serverUrl = `http://${location.hostname}:8080`;
     function toggleUploadMode() {
         uploadMode = !uploadMode
     }
 
-    async function delFile(fileName: string) {        
+    async function delFile(fileName: string) { 
+        const serverUrl = `http://${location.hostname}:8080`;       
         const response = await fetch(`${serverUrl}/projects/delFile?projectName=${projectName}&fileName=${encodeURIComponent(fileName)}`);
         if (response.ok) {
             console.log("File succesfully deleted");
@@ -27,6 +27,7 @@
 
     async function fetchProjectFiles() {
         if (!projectName) return;
+        const serverUrl = `http://${location.hostname}:8080`;
         const response = await fetch(`${serverUrl}/projects/getfiles?projectName=${projectName}`);
         if (response.ok) {
             projectFiles = await response.json();
@@ -67,6 +68,7 @@
         }
 
         try {
+            const serverUrl = `http://${location.hostname}:8080`;
             const response = await fetch(`${serverUrl}/projects/uploadFile?projectName=${projectName}`, {
             method: "POST",
             body: formData,

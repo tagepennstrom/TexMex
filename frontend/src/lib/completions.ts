@@ -1,7 +1,7 @@
 import { CompletionContext } from "@codemirror/autocomplete";
 
 export function myCompletions(context: CompletionContext) {
-    let word = context.matchBefore(/\\w*/);
+    let word = context.matchBefore(/\\\w*/);
     if (!word || (word.from == word.to && !context.explicit)) return null;
   
     return {
